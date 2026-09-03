@@ -1,5 +1,6 @@
 package game;
 
+import game.entity.Direction;
 import game.entity.Player;
 
 import javax.imageio.ImageIO;
@@ -8,17 +9,19 @@ import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.EnumMap;
+import java.util.Map;
 
 public class GameRenderer {
 
     private final Game game;
 
-    private final BufferedImage playerSprite;
+    private final Map<Direction, BufferedImage[]> playerSprites;
 
     public  GameRenderer(Game game) {
         this.game = game;
         //player sprite
-        playerSprite = loadImage("/sprites/spriteboy.png");
+        this.playerSprites = loadPlayerSprites();
     }
 
     public void render(
@@ -35,7 +38,7 @@ public class GameRenderer {
         drawBackground(graphics, screenWidth, screenHeight);
         drawPlayer(graphics);
         //drawInstructions(graphics);
-        //drawDebugPanel(graphics, fps);
+        drawDebugPanel(graphics, fps);
     }
 
     // Load image from resources
@@ -59,6 +62,46 @@ public class GameRenderer {
         }
     }
 
+    //load playersprites
+    private Map<Direction, BufferedImage[]> loadPlayerSprites() {
+        Map<Direction, BufferedImage[]> sprites =
+                new EnumMap<>(Direction.class);
+
+        sprites.put(
+                Direction.DOWN,
+                new BufferedImage[]{
+                        loadImage("/sprites/player/spriteboy_down1.png"),
+                        loadImage("/sprites/player/spriteboy_down2.png")
+                }
+        );
+
+        sprites.put(
+                Direction.UP,
+                new BufferedImage[]{
+                        loadImage("/sprites/player/spriteboy_up1.png"),
+                        loadImage("/sprites/player/spriteboy_up2.png")
+                }
+        );
+
+        sprites.put(
+                Direction.LEFT,
+                new BufferedImage[]{
+                        loadImage("/sprites/player/spriteboy_left1.png"),
+                        loadImage("/sprites/player/spriteboy_left2.png")
+                }
+        );
+
+        sprites.put(
+                Direction.RIGHT,
+                new BufferedImage[]{
+                        loadImage("/sprites/player/spriteboy_right1.png"),
+                        loadImage("/sprites/player/spriteboy_right2.png")
+                }
+        );
+
+        return sprites;
+    }
+
     private void drawBackground(
             Graphics2D graphics,
             int screenWidth,
@@ -70,6 +113,13 @@ public class GameRenderer {
 
     private void drawPlayer(Graphics2D graphics) {
         Player player = game.getPlayer();
+
+        BufferedImage[] directionFrames =
+                playerSprites.get(player.getFacingDirection());
+
+        BufferedImage currentSprite =
+                directionFrames[player.getAnimationFrame()];
+
         int screenX = (int) Math.round(player.getX());
         int screenY = (int) Math.round(player.getY());
 
@@ -88,8 +138,17 @@ public class GameRenderer {
 //                player.getWidth(),
 //                player.getHeight()
 //        );
+
+        /*
+         * Nearest-neighbor scaling keeps pixel art sharp.
+         */
+        graphics.setRenderingHint(
+                RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
+        );
+
         graphics.drawImage(
-                playerSprite,
+                currentSprite,
                 screenX,
                 screenY,
                 player.getWidth(),
@@ -97,13 +156,13 @@ public class GameRenderer {
                 null
         );
 
-        graphics.setColor(Color.YELLOW);// for debug mode
-        graphics.drawRect(
-                screenX,
-                screenY,
-                player.getWidth(),
-                player.getHeight()
-        );
+//        graphics.setColor(Color.YELLOW);// for debug mode
+//        graphics.drawRect(
+//                screenX,
+//                screenY,
+//                player.getWidth(),
+//                player.getHeight()
+//        );
     }
 
     private void drawInstructions(Graphics2D graphics) {
@@ -123,7 +182,7 @@ public class GameRenderer {
         int panelX = 10;
         int panelY = 40;
         int panelWidth = 420;
-        int panelHeight = 255;
+        int panelHeight = 180;
 
         graphics.setColor(new Color(0, 0, 0, 190));
         graphics.fillRoundRect(
@@ -147,42 +206,42 @@ public class GameRenderer {
                 textY
         );
 
-        textY += lineHeight;
+//        textY += lineHeight;
 
-        graphics.drawString(
-                String.format(
-                        "Position: X = %.2f   Y = %.2f",
-                        player.getX(),
-                        player.getY()
-                ),
-                textX,
-                textY
-        );
+//        graphics.drawString(
+//                String.format(
+//                        "Position: X = %.2f   Y = %.2f",
+//                        player.getX(),
+//                        player.getY()
+//                ),
+//                textX,
+//                textY
+//        );
 
-        textY += lineHeight;
+//        textY += lineHeight;
 
-        graphics.drawString(
-                String.format(
-                        "Direction: X = %.3f   Y = %.3f",
-                        player.getDirectionX(),
-                        player.getDirectionY()
-                ),
-                textX,
-                textY
-        );
+//        graphics.drawString(
+//                String.format(
+//                        "Direction: X = %.3f   Y = %.3f",
+//                        player.getDirectionX(),
+//                        player.getDirectionY()
+//                ),
+//                textX,
+//                textY
+//        );
 
-        textY += lineHeight;
+//        textY += lineHeight;
 
-        graphics.drawString(
-                String.format(
-                        "Speed: %.2f pixels/second",
-                        player.getSpeed()
-                ),
-                textX,
-                textY
-        );
+//        graphics.drawString(
+//                String.format(
+//                        "Speed: %.2f pixels/second",
+//                        player.getSpeed()
+//                ),
+//                textX,
+//                textY
+//        );
 
-        textY += lineHeight;
+//        textY += lineHeight;
 
         graphics.drawString(
                 String.format(
@@ -195,15 +254,15 @@ public class GameRenderer {
 
         textY += lineHeight;
 
-        graphics.drawString(
-                String.format(
-                        "Movement: X = %.3f   Y = %.3f",
-                        player.getMovementX(),
-                        player.getMovementY()
-                ),
-                textX,
-                textY
-        );
+//        graphics.drawString(
+//                String.format(
+//                        "Movement: X = %.3f   Y = %.3f",
+//                        player.getMovementX(),
+//                        player.getMovementY()
+//                ),
+//                textX,
+//                textY
+//        );
 
         textY += lineHeight;
 
@@ -217,6 +276,29 @@ public class GameRenderer {
 
         graphics.drawString(
                 "FPS: " + fps,
+                textX,
+                textY
+        );
+        textY += lineHeight;
+
+        graphics.drawString(
+                "Facing: " + player.getFacingDirection(),
+                textX,
+                textY
+        );
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                "Moving: " + player.isMoving(),
+                textX,
+                textY
+        );
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                "Animation frame: " + player.getAnimationFrame(),
                 textX,
                 textY
         );
