@@ -12,8 +12,8 @@ public class Game {
         player = new Player(
                 100,
                 100,
-                32,
-                32,
+                64,
+                64,
                 input
         );
     }
