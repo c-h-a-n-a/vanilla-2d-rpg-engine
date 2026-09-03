@@ -102,7 +102,7 @@ public class GameLoop implements Runnable{
 
             while (updateDelta >= 1
                     && updatesPerformed < MAX_UPDATES_PER_CYCLE) {
-
+                //gameloop update
                 game.update(
                         SECONDS_PER_UPDATE,
                         gameCanvas.getWidth(),
@@ -118,6 +118,7 @@ public class GameLoop implements Runnable{
             }
 
             if (frameDelta >= 1) {
+                //gameloop render
                 gameCanvas.render(renderer);
 
                 /*

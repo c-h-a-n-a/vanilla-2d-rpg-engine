@@ -2,15 +2,23 @@ package game;
 
 import game.entity.Player;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
 
 public class GameRenderer {
 
     private final Game game;
 
+    private final BufferedImage playerSprite;
+
     public  GameRenderer(Game game) {
         this.game = game;
+        //player sprite
+        playerSprite = loadImage("/sprites/spriteboy.png");
     }
 
     public void render(
@@ -26,8 +34,29 @@ public class GameRenderer {
 
         drawBackground(graphics, screenWidth, screenHeight);
         drawPlayer(graphics);
-        drawInstructions(graphics);
+        //drawInstructions(graphics);
         //drawDebugPanel(graphics, fps);
+    }
+
+    // Load image from resources
+    private BufferedImage loadImage(String resourcePath) {
+        try (InputStream inputStream =
+                     GameRenderer.class.getResourceAsStream(resourcePath)) {
+
+            if (inputStream == null) {
+                throw new IllegalArgumentException(
+                        "Image resource not found: " + resourcePath
+                );
+            }
+
+            return ImageIO.read(inputStream);
+
+        } catch (IOException exception) {
+            throw new IllegalStateException(
+                    "Failed to load image: " + resourcePath,
+                    exception
+            );
+        }
     }
 
     private void drawBackground(
@@ -44,15 +73,31 @@ public class GameRenderer {
         int screenX = (int) Math.round(player.getX());
         int screenY = (int) Math.round(player.getY());
 
-        graphics.setColor(new Color(50, 100, 220));
-        graphics.fillRect(
+//        graphics.setColor(new Color(50, 100, 220));
+//        graphics.fillRect(
+//                screenX,
+//                screenY,
+//                player.getWidth(),
+//                player.getHeight()
+//        );
+//
+//        graphics.setColor(Color.WHITE);
+//        graphics.drawRect(
+//                screenX,
+//                screenY,
+//                player.getWidth(),
+//                player.getHeight()
+//        );
+        graphics.drawImage(
+                playerSprite,
                 screenX,
                 screenY,
                 player.getWidth(),
-                player.getHeight()
+                player.getHeight(),
+                null
         );
 
-        graphics.setColor(Color.WHITE);
+        graphics.setColor(Color.YELLOW);// for debug mode
         graphics.drawRect(
                 screenX,
                 screenY,
