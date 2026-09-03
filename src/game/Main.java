@@ -26,11 +26,20 @@ public class Main {
 
         GameCanvas gameCanvas = new GameCanvas(
                 SCREEN_WIDTH,
-                SCREEN_HEIGHT,
-                keyboardInput
+                SCREEN_HEIGHT
         );
 
-        GameLoop gameLoop = new GameLoop(gameCanvas);
+        gameCanvas.addKeyListener(keyboardInput);
+        gameCanvas.addFocusListener(keyboardInput);
+
+        Game game = new Game(keyboardInput);
+        GameRenderer renderer = new GameRenderer(game);
+
+        GameLoop gameLoop = new GameLoop(
+                game,
+                gameCanvas,
+                renderer
+        );
 
         JFrame window = new JFrame("My 2D RPG");
 

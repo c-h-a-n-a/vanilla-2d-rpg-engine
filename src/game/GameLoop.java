@@ -21,13 +21,20 @@ public class GameLoop implements Runnable{
     private static final long MAX_ELAPSED_TIME =
             250_000_000L;
 
+    private final Game game;
     private final GameCanvas gameCanvas;
+    private final GameRenderer renderer;
 
     private Thread gameThread;
     private volatile boolean running;
 
-    public GameLoop(GameCanvas gameCanvas) {
+    public GameLoop(
+            Game game,
+            GameCanvas gameCanvas,
+            GameRenderer renderer) {
+        this.game = game;
         this.gameCanvas = gameCanvas;
+        this.renderer = renderer;
     }
 
     public synchronized void start() {
@@ -96,7 +103,10 @@ public class GameLoop implements Runnable{
             while (updateDelta >= 1
                     && updatesPerformed < MAX_UPDATES_PER_CYCLE) {
 
-                gameCanvas.update(SECONDS_PER_UPDATE);
+                game.update(
+                        SECONDS_PER_UPDATE,
+                        gameCanvas.getWidth(),
+                        gameCanvas.getHeight());
 
                 updateDelta--;
                 updatesPerformed++;
@@ -108,7 +118,7 @@ public class GameLoop implements Runnable{
             }
 
             if (frameDelta >= 1) {
-                gameCanvas.render();
+                gameCanvas.render(renderer);
 
                 /*
                  * Discards missed full frames but preserves
