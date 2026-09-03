@@ -1,9 +1,7 @@
 package game;
 
-import javax.swing.JFrame;
-import javax.swing.SwingUtilities;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import javax.swing.*;
+import java.awt.*;
 
 public class Main {
     private static final int SCREEN_WIDTH = 960;
@@ -13,6 +11,13 @@ public class Main {
     }
 
     public static void main(String[] args) {
+        /*
+         * Keep Java's coordinate scale consistent when moving
+         * between monitors with different Windows scaling.
+         *
+         * This must run before Swing or AWT creates a window.
+         */
+        System.setProperty("sun.java2d.uiScale", "1.5");
         SwingUtilities.invokeLater(Main::startGame);
     }
 
@@ -29,9 +34,17 @@ public class Main {
 
         JFrame window = new JFrame("My 2D RPG");
 
-        window.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        window.setLayout(new BorderLayout());
+
+        /*
+         * If Windows briefly exposes the frame background,
+         * it will be black instead of white.
+         */
+        window.getContentPane().setBackground(Color.BLACK);
+        window.add(gameCanvas, BorderLayout.CENTER);
         window.setResizable(false);
-        window.add(gameCanvas);
+
 
         /*
          * Sizes the JFrame according to the preferred
@@ -48,13 +61,6 @@ public class Main {
          */
         gameCanvas.initialize();
 
-        window.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent event) {
-                gameLoop.stop();
-                window.dispose();
-            }
-        });
 
         gameLoop.start();
     }

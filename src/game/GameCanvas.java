@@ -27,6 +27,7 @@ public class GameCanvas extends Canvas {
     private int framesThisSecond;
     private long fpsTimer = System.nanoTime();
 
+
     public GameCanvas(int width,
                       int height,
                       KeyboardInput input
@@ -127,6 +128,7 @@ public class GameCanvas extends Canvas {
     }
 
     public void render() {
+
         BufferStrategy bufferStrategy = getBufferStrategy();
 
         if (bufferStrategy == null) {
@@ -344,6 +346,16 @@ public class GameCanvas extends Canvas {
                 textX,
                 textY
         );
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                "Canvas: " + getWidth() + " x " + getHeight(),
+                textX,
+                textY
+        );
+
+
     }
 
     //helper method
