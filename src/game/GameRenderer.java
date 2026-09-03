@@ -1,5 +1,7 @@
 package game;
 
+import game.entity.Player;
+
 import java.awt.*;
 import java.awt.event.KeyEvent;
 
@@ -38,24 +40,24 @@ public class GameRenderer {
     }
 
     private void drawPlayer(Graphics2D graphics) {
-        int playerX = (int) Math.round(game.getPlayerX());
-        int playerY = (int) Math.round(game.getPlayerY());
-        int playerSize = game.getPlayerSize();
+        Player player = game.getPlayer();
+        int screenX = (int) Math.round(player.getX());
+        int screenY = (int) Math.round(player.getY());
 
         graphics.setColor(new Color(50, 100, 220));
         graphics.fillRect(
-                playerX,
-                playerY,
-                playerSize,
-                playerSize
+                screenX,
+                screenY,
+                player.getWidth(),
+                player.getHeight()
         );
 
         graphics.setColor(Color.WHITE);
         graphics.drawRect(
-                playerX,
-                playerY,
-                playerSize,
-                playerSize
+                screenX,
+                screenY,
+                player.getWidth(),
+                player.getHeight()
         );
     }
 
@@ -72,6 +74,7 @@ public class GameRenderer {
             Graphics2D graphics,
             int fps
     ) {
+        Player player = game.getPlayer();
         int panelX = 10;
         int panelY = 40;
         int panelWidth = 420;
@@ -104,8 +107,8 @@ public class GameRenderer {
         graphics.drawString(
                 String.format(
                         "Position: X = %.2f   Y = %.2f",
-                        game.getPlayerX(),
-                        game.getPlayerY()
+                        player.getX(),
+                        player.getY()
                 ),
                 textX,
                 textY
@@ -116,8 +119,8 @@ public class GameRenderer {
         graphics.drawString(
                 String.format(
                         "Direction: X = %.3f   Y = %.3f",
-                        game.getDirectionX(),
-                        game.getDirectionY()
+                        player.getDirectionX(),
+                        player.getDirectionY()
                 ),
                 textX,
                 textY
@@ -128,7 +131,7 @@ public class GameRenderer {
         graphics.drawString(
                 String.format(
                         "Speed: %.2f pixels/second",
-                        game.getPlayerSpeed()
+                        player.getSpeed()
                 ),
                 textX,
                 textY
@@ -139,7 +142,7 @@ public class GameRenderer {
         graphics.drawString(
                 String.format(
                         "Delta time: %.4f seconds",
-                        game.getLastDeltaTime()
+                        player.getLastDeltaTime()
                 ),
                 textX,
                 textY
@@ -150,8 +153,8 @@ public class GameRenderer {
         graphics.drawString(
                 String.format(
                         "Movement: X = %.3f   Y = %.3f",
-                        game.getMovementX(),
-                        game.getMovementY()
+                        player.getMovementX(),
+                        player.getMovementY()
                 ),
                 textX,
                 textY
