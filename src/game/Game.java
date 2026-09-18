@@ -10,8 +10,8 @@ public class Game {
     public Game(KeyboardInput input) {
         this.input = input;
         player = new Player(
-                100,
-                100,
+                300,
+                200,
                 64,
                 64,
                 input

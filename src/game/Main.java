@@ -5,7 +5,7 @@ import java.awt.*;
 
 public class Main {
     private static final int SCREEN_WIDTH = 960;
-    private static final int SCREEN_HEIGHT = 540;
+    private static final int SCREEN_HEIGHT = 576;
 
     private Main() {
     }

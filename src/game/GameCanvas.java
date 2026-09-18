@@ -11,6 +11,7 @@ public class GameCanvas extends Canvas {
     private long fpsTimer = System.nanoTime();
 
 
+
     public GameCanvas(int width, int height) {
 
         setPreferredSize(new Dimension(width, height));

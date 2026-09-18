@@ -2,6 +2,8 @@ package game;
 
 import game.entity.Direction;
 import game.entity.Player;
+import game.tile.TileManager;
+import game.world.WorldMap;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -18,10 +20,17 @@ public class GameRenderer {
 
     private final Map<Direction, BufferedImage[]> playerSprites;
 
+    //for rendering tile
+    private TileManager tileManager;
+    private WorldMap worldMap;
+
     public  GameRenderer(Game game) {
         this.game = game;
         //player sprite
         this.playerSprites = loadPlayerSprites();
+
+        tileManager = new TileManager();
+        worldMap = new WorldMap(tileManager);
     }
 
     public void render(
@@ -36,9 +45,13 @@ public class GameRenderer {
         );
 
         drawBackground(graphics, screenWidth, screenHeight);
+        //draw tiles
+        worldMap.render(graphics);
         drawPlayer(graphics);
+
+
         //drawInstructions(graphics);
-        drawDebugPanel(graphics, fps);
+        //drawDebugPanel(graphics, fps);
     }
 
     // Load image from resources
