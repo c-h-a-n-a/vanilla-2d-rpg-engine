@@ -1,1 +1,6 @@
-/out/production
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Build output
+out/
