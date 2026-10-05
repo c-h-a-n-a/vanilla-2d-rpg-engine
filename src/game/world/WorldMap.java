@@ -4,6 +4,7 @@ import game.tile.TileManager;
 import game.tile.TileType;
 
 import java.awt.*;
+import java.io.IOException;
 import java.util.List;
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -14,92 +15,173 @@ public class WorldMap {
 
     private TileManager tileManager;
 
-    private TileType[][] map;
+    private TileType[][] groundMap;
+    private TileType[][] objectMap;
 
     public WorldMap(TileManager tileManager) {
 
         this.tileManager = tileManager;
 
-        loadMap("/maps/world01.txt");
+        loadMaps();
     }
 
-    private void loadMap(String filePath) {
+    private void loadMaps() {
 
-        try {
+        groundMap = loadMap(
+                "/maps/ground01.txt",
+                false
+        );
 
-            InputStream inputStream =
-                    getClass().getResourceAsStream(filePath);
+        objectMap = loadMap(
+                "/maps/objects01.txt",
+                true
+        );
+    }
+
+    private TileType[][] loadMap(
+            String resourcePath,
+            boolean objectLayer
+    ) {
+
+        List<TileType[]> rows = new ArrayList<>();
+
+        try (InputStream inputStream =
+                     getClass().getResourceAsStream(resourcePath)) {
+
+            if (inputStream == null) {
+                throw new IOException(
+                        "Could not find map: " + resourcePath
+                );
+            }
 
             BufferedReader reader =
                     new BufferedReader(
                             new InputStreamReader(inputStream)
                     );
 
-            List<TileType[]> rows = new ArrayList<>();
-
             String line;
 
             while ((line = reader.readLine()) != null) {
 
-                TileType[] row = new TileType[line.length()];
+                // Ignore empty lines
+                if (line.isEmpty()) {
+                    continue;
+                }
+
+                TileType[] row =
+                        new TileType[line.length()];
 
                 for (int col = 0; col < line.length(); col++) {
 
-                    char tileChar = line.charAt(col);
+                    char symbol = line.charAt(col);
 
-                    row[col] = convertCharToTile(tileChar);
+                    row[col] =
+                            convertCharToTile(
+                                    symbol,
+                                    objectLayer
+                            );
                 }
 
                 rows.add(row);
             }
 
-            map = rows.toArray(new TileType[0][]);
-
-            reader.close();
-
-        } catch (Exception e) {
+        } catch (IOException e) {
 
             e.printStackTrace();
         }
+
+        return rows.toArray(new TileType[0][]);
     }
 
-    private TileType convertCharToTile(char tileChar) {
+    private TileType convertCharToTile(
+            char symbol,
+            boolean objectLayer
+    ) {
 
-        switch (tileChar) {
+        if (objectLayer) {
 
-            case 'G':
-                return TileType.GRASS;
+            return switch (symbol) {
 
-            case 'E':
-                return TileType.EARTH;
+                case 'T' -> TileType.TREE;
+                case 'R' -> TileType.ROCK;
 
-            case 'T':
-                return TileType.TREE;
+                // '.' means no object
+                case '.' -> null;
 
-            case 'R':
-                return TileType.ROCK;
+                default -> null;
+            };
 
-            default:
-                return TileType.GRASS;
+        } else {
+
+            return switch (symbol) {
+
+                case 'G' -> TileType.GRASS;
+                case 'E' -> TileType.EARTH;
+
+                default -> TileType.GRASS;
+            };
         }
     }
 
-    public void render(Graphics2D g) {
+    private void renderGround(Graphics2D g) {
 
-        for (int row = 0; row < map.length; row++) {
+        for (int row = 0; row < groundMap.length; row++) {
 
-            for (int col = 0; col < map[row].length; col++) {
+            for (int col = 0; col < groundMap[row].length; col++) {
 
-                int x = col * TileManager.TILE_SIZE;
-                int y = row * TileManager.TILE_SIZE;
+                TileType ground =
+                        groundMap[row][col];
+
+                int x =
+                        col * TileManager.TILE_SIZE;
+
+                int y =
+                        row * TileManager.TILE_SIZE;
 
                 tileManager.render(
                         g,
-                        map[row][col],
+                        ground,
                         x,
                         y
                 );
             }
         }
+    }
+
+    private void renderObjects(Graphics2D g) {
+
+        for (int row = 0; row < objectMap.length; row++) {
+
+            for (int col = 0; col < objectMap[row].length; col++) {
+
+                TileType object =
+                        objectMap[row][col];
+
+                // No object at this position
+                if (object == null) {
+                    continue;
+                }
+
+                int x =
+                        col * TileManager.TILE_SIZE;
+
+                int y =
+                        row * TileManager.TILE_SIZE;
+
+                tileManager.render(
+                        g,
+                        object,
+                        x,
+                        y
+                );
+            }
+        }
+    }
+
+    public void render(Graphics2D g) {
+
+        renderGround(g);
+
+        renderObjects(g);
     }
 }
