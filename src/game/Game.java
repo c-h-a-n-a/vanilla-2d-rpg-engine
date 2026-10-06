@@ -1,17 +1,41 @@
 package game;
 
 import game.entity.Player;
+import game.tile.TileManager;
+import game.world.WorldMap;
 
 public class Game {
 
     private final Player player;
     private final KeyboardInput input;
+    private final WorldMap worldMap;
 
-    public Game(KeyboardInput input) {
+    public Game(
+            KeyboardInput input
+    ) {
+
         this.input = input;
+
+        /*
+         * Create the world.
+         */
+        TileManager tileManager =
+                new TileManager();
+
+        worldMap =
+                new WorldMap(
+                        tileManager
+                );
+
+        /*
+         * Player position is a WORLD position.
+         *
+         * x = 300
+         * y = 200
+         */
         player = new Player(
-                300,
-                200,
+                1000,
+                400,
                 64,
                 64,
                 input
@@ -19,13 +43,24 @@ public class Game {
     }
 
     public void update(
-            double deltaTime,
-            int canvasWidth,
-            int canvasHeight
+            double deltaTime
     ) {
-        player.update(deltaTime);
-        //player.keepInside(worldWidth, worldHeight);
-        player.keepInside(canvasWidth, canvasHeight);
+
+        /*
+         * Update player movement.
+         */
+        player.update(
+                deltaTime
+        );
+
+        /*
+         * Keep the player inside
+         * the WORLD boundaries.
+         */
+        player.keepInside(
+                worldMap.getWorldWidth(),
+                worldMap.getWorldHeight()
+        );
     }
 
     public Player getPlayer() {
@@ -36,4 +71,7 @@ public class Game {
         return input;
     }
 
+    public WorldMap getWorldMap() {
+        return worldMap;
+    }
 }

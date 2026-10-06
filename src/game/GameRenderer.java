@@ -2,12 +2,11 @@ package game;
 
 import game.entity.Direction;
 import game.entity.Player;
-import game.tile.TileManager;
+import game.world.Camera;
 import game.world.WorldMap;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,19 +17,42 @@ public class GameRenderer {
 
     private final Game game;
 
-    private final Map<Direction, BufferedImage[]> playerSprites;
+    private final Map<
+            Direction,
+            BufferedImage[]
+            > playerSprites;
 
-    //for rendering tile
-    private TileManager tileManager;
-    private WorldMap worldMap;
+    private final WorldMap worldMap;
 
-    public  GameRenderer(Game game) {
+    private final Camera camera;
+
+    public GameRenderer(
+            Game game
+    ) {
+
         this.game = game;
-        //player sprite
-        this.playerSprites = loadPlayerSprites();
 
-        tileManager = new TileManager();
-        worldMap = new WorldMap(tileManager);
+        /*
+         * Player sprites.
+         */
+        this.playerSprites =
+                loadPlayerSprites();
+
+        /*
+         * World comes from Game.
+         */
+        this.worldMap =
+                game.getWorldMap();
+
+        /*
+         * Camera uses the actual
+         * game resolution.
+         */
+        this.camera =
+                new Camera(
+                        Main.SCREEN_WIDTH,
+                        Main.SCREEN_HEIGHT
+                );
     }
 
     public void render(
@@ -39,76 +61,173 @@ public class GameRenderer {
             int screenHeight,
             int fps
     ) {
+
+        /*
+         * Pixel-art rendering.
+         */
         graphics.setRenderingHint(
                 RenderingHints.KEY_ANTIALIASING,
-                RenderingHints.VALUE_ANTIALIAS_ON
+                RenderingHints.VALUE_ANTIALIAS_OFF
         );
 
-        drawBackground(graphics, screenWidth, screenHeight);
-        //draw tiles
-        worldMap.render(graphics);
-        drawPlayer(graphics);
+        drawBackground(
+                graphics,
+                screenWidth,
+                screenHeight
+        );
 
+        Player player =
+                game.getPlayer();
 
-        //drawInstructions(graphics);
-        //drawDebugPanel(graphics, fps);
+        /*
+         * Calculate the CENTER of the player
+         * in WORLD coordinates.
+         */
+        double playerCenterX =
+                player.getX()
+                        + player.getWidth() / 2.0;
+
+        double playerCenterY =
+                player.getY()
+                        + player.getHeight() / 2.0;
+
+        /*
+         * Update the camera.
+         */
+        camera.follow(
+                playerCenterX,
+                playerCenterY,
+                worldMap.getWorldWidth(),
+                worldMap.getWorldHeight()
+        );
+
+        /*
+         * Render WORLD.
+         */
+        worldMap.render(
+                graphics,
+                camera
+        );
+
+        /*
+         * Render PLAYER.
+         */
+        drawPlayer(
+                graphics
+        );
+
+        // drawInstructions(graphics);
+        // drawDebugPanel(graphics, fps);
     }
 
-    // Load image from resources
-    private BufferedImage loadImage(String resourcePath) {
-        try (InputStream inputStream =
-                     GameRenderer.class.getResourceAsStream(resourcePath)) {
+    private BufferedImage loadImage(
+            String resourcePath
+    ) {
+
+        try (
+                InputStream inputStream =
+                        GameRenderer.class
+                                .getResourceAsStream(
+                                        resourcePath
+                                )
+        ) {
 
             if (inputStream == null) {
+
                 throw new IllegalArgumentException(
-                        "Image resource not found: " + resourcePath
+                        "Image resource not found: "
+                                + resourcePath
                 );
             }
 
-            return ImageIO.read(inputStream);
+            return ImageIO.read(
+                    inputStream
+            );
 
         } catch (IOException exception) {
+
             throw new IllegalStateException(
-                    "Failed to load image: " + resourcePath,
+                    "Failed to load image: "
+                            + resourcePath,
                     exception
             );
         }
     }
 
-    //load playersprites
-    private Map<Direction, BufferedImage[]> loadPlayerSprites() {
-        Map<Direction, BufferedImage[]> sprites =
-                new EnumMap<>(Direction.class);
+    private Map<
+            Direction,
+            BufferedImage[]
+            > loadPlayerSprites() {
+
+        Map<
+                Direction,
+                BufferedImage[]
+                > sprites =
+                new EnumMap<>(
+                        Direction.class
+                );
 
         sprites.put(
                 Direction.DOWN,
                 new BufferedImage[]{
-                        loadImage("/sprites/player/spriteboy_down1.png"),
-                        loadImage("/sprites/player/spriteboy_down2.png")
+
+                        loadImage(
+                                "/sprites/player/"
+                                        + "spriteboy_down1.png"
+                        ),
+
+                        loadImage(
+                                "/sprites/player/"
+                                        + "spriteboy_down2.png"
+                        )
                 }
         );
 
         sprites.put(
                 Direction.UP,
                 new BufferedImage[]{
-                        loadImage("/sprites/player/spriteboy_up1.png"),
-                        loadImage("/sprites/player/spriteboy_up2.png")
+
+                        loadImage(
+                                "/sprites/player/"
+                                        + "spriteboy_up1.png"
+                        ),
+
+                        loadImage(
+                                "/sprites/player/"
+                                        + "spriteboy_up2.png"
+                        )
                 }
         );
 
         sprites.put(
                 Direction.LEFT,
                 new BufferedImage[]{
-                        loadImage("/sprites/player/spriteboy_left1.png"),
-                        loadImage("/sprites/player/spriteboy_left2.png")
+
+                        loadImage(
+                                "/sprites/player/"
+                                        + "spriteboy_left1.png"
+                        ),
+
+                        loadImage(
+                                "/sprites/player/"
+                                        + "spriteboy_left2.png"
+                        )
                 }
         );
 
         sprites.put(
                 Direction.RIGHT,
                 new BufferedImage[]{
-                        loadImage("/sprites/player/spriteboy_right1.png"),
-                        loadImage("/sprites/player/spriteboy_right2.png")
+
+                        loadImage(
+                                "/sprites/player/"
+                                        + "spriteboy_right1.png"
+                        ),
+
+                        loadImage(
+                                "/sprites/player/"
+                                        + "spriteboy_right2.png"
+                        )
                 }
         );
 
@@ -120,40 +239,56 @@ public class GameRenderer {
             int screenWidth,
             int screenHeight
     ) {
-        graphics.setColor(new Color(45, 120, 65));
-        graphics.fillRect(0, 0, screenWidth, screenHeight);
+
+        graphics.setColor(
+                new Color(
+                        45,
+                        120,
+                        65
+                )
+        );
+
+        graphics.fillRect(
+                0,
+                0,
+                screenWidth,
+                screenHeight
+        );
     }
 
-    private void drawPlayer(Graphics2D graphics) {
-        Player player = game.getPlayer();
+    private void drawPlayer(
+            Graphics2D graphics
+    ) {
+
+        Player player =
+                game.getPlayer();
 
         BufferedImage[] directionFrames =
-                playerSprites.get(player.getFacingDirection());
+                playerSprites.get(
+                        player.getFacingDirection()
+                );
 
         BufferedImage currentSprite =
-                directionFrames[player.getAnimationFrame()];
-
-        int screenX = (int) Math.round(player.getX());
-        int screenY = (int) Math.round(player.getY());
-
-//        graphics.setColor(new Color(50, 100, 220));
-//        graphics.fillRect(
-//                screenX,
-//                screenY,
-//                player.getWidth(),
-//                player.getHeight()
-//        );
-//
-//        graphics.setColor(Color.WHITE);
-//        graphics.drawRect(
-//                screenX,
-//                screenY,
-//                player.getWidth(),
-//                player.getHeight()
-//        );
+                directionFrames[
+                        player.getAnimationFrame()
+                        ];
 
         /*
-         * Nearest-neighbor scaling keeps pixel art sharp.
+         * Convert player's WORLD position
+         * into SCREEN position.
+         */
+        int screenX =
+                camera.worldToScreenX(
+                        player.getX()
+                );
+
+        int screenY =
+                camera.worldToScreenY(
+                        player.getY()
+                );
+
+        /*
+         * Keep pixel art sharp.
          */
         graphics.setRenderingHint(
                 RenderingHints.KEY_INTERPOLATION,
@@ -168,18 +303,16 @@ public class GameRenderer {
                 player.getHeight(),
                 null
         );
-
-//        graphics.setColor(Color.YELLOW);// for debug mode
-//        graphics.drawRect(
-//                screenX,
-//                screenY,
-//                player.getWidth(),
-//                player.getHeight()
-//        );
     }
 
-    private void drawInstructions(Graphics2D graphics) {
-        graphics.setColor(Color.WHITE);
+    private void drawInstructions(
+            Graphics2D graphics
+    ) {
+
+        graphics.setColor(
+                Color.WHITE
+        );
+
         graphics.drawString(
                 "Move: WASD or Arrow Keys",
                 15,
@@ -191,13 +324,24 @@ public class GameRenderer {
             Graphics2D graphics,
             int fps
     ) {
-        Player player = game.getPlayer();
+
+        Player player =
+                game.getPlayer();
+
         int panelX = 10;
         int panelY = 40;
         int panelWidth = 420;
         int panelHeight = 180;
 
-        graphics.setColor(new Color(0, 0, 0, 190));
+        graphics.setColor(
+                new Color(
+                        0,
+                        0,
+                        0,
+                        190
+                )
+        );
+
         graphics.fillRoundRect(
                 panelX,
                 panelY,
@@ -207,10 +351,16 @@ public class GameRenderer {
                 10
         );
 
-        graphics.setColor(Color.WHITE);
+        graphics.setColor(
+                Color.WHITE
+        );
 
-        int textX = panelX + 15;
-        int textY = panelY + 25;
+        int textX =
+                panelX + 15;
+
+        int textY =
+                panelY + 25;
+
         int lineHeight = 22;
 
         graphics.drawString(
@@ -219,42 +369,19 @@ public class GameRenderer {
                 textY
         );
 
-//        textY += lineHeight;
+        textY += lineHeight;
 
-//        graphics.drawString(
-//                String.format(
-//                        "Position: X = %.2f   Y = %.2f",
-//                        player.getX(),
-//                        player.getY()
-//                ),
-//                textX,
-//                textY
-//        );
+        graphics.drawString(
+                String.format(
+                        "Position: X = %.2f   Y = %.2f",
+                        player.getX(),
+                        player.getY()
+                ),
+                textX,
+                textY
+        );
 
-//        textY += lineHeight;
-
-//        graphics.drawString(
-//                String.format(
-//                        "Direction: X = %.3f   Y = %.3f",
-//                        player.getDirectionX(),
-//                        player.getDirectionY()
-//                ),
-//                textX,
-//                textY
-//        );
-
-//        textY += lineHeight;
-
-//        graphics.drawString(
-//                String.format(
-//                        "Speed: %.2f pixels/second",
-//                        player.getSpeed()
-//                ),
-//                textX,
-//                textY
-//        );
-
-//        textY += lineHeight;
+        textY += lineHeight;
 
         graphics.drawString(
                 String.format(
@@ -264,18 +391,6 @@ public class GameRenderer {
                 textX,
                 textY
         );
-
-        textY += lineHeight;
-
-//        graphics.drawString(
-//                String.format(
-//                        "Movement: X = %.3f   Y = %.3f",
-//                        player.getMovementX(),
-//                        player.getMovementY()
-//                ),
-//                textX,
-//                textY
-//        );
 
         textY += lineHeight;
 
@@ -292,10 +407,12 @@ public class GameRenderer {
                 textX,
                 textY
         );
+
         textY += lineHeight;
 
         graphics.drawString(
-                "Facing: " + player.getFacingDirection(),
+                "Facing: "
+                        + player.getFacingDirection(),
                 textX,
                 textY
         );
@@ -303,7 +420,8 @@ public class GameRenderer {
         textY += lineHeight;
 
         graphics.drawString(
-                "Moving: " + player.isMoving(),
+                "Moving: "
+                        + player.isMoving(),
                 textX,
                 textY
         );
@@ -311,37 +429,80 @@ public class GameRenderer {
         textY += lineHeight;
 
         graphics.drawString(
-                "Animation frame: " + player.getAnimationFrame(),
+                "Animation frame: "
+                        + player.getAnimationFrame(),
                 textX,
                 textY
         );
     }
 
     private String getPressedKeysText() {
-        KeyboardInput input = game.getInput();
-        StringBuilder keys = new StringBuilder("Keys: ");
 
-        if (input.isPressed(KeyEvent.VK_W)
-                || input.isPressed(KeyEvent.VK_UP)) {
+        KeyboardInput input =
+                game.getInput();
+
+        StringBuilder keys =
+                new StringBuilder(
+                        "Keys: "
+                );
+
+        if (
+                input.isPressed(
+                        java.awt.event.KeyEvent.VK_W
+                )
+                        ||
+                        input.isPressed(
+                                java.awt.event.KeyEvent.VK_UP
+                        )
+        ) {
+
             keys.append("UP ");
         }
 
-        if (input.isPressed(KeyEvent.VK_S)
-                || input.isPressed(KeyEvent.VK_DOWN)) {
+        if (
+                input.isPressed(
+                        java.awt.event.KeyEvent.VK_S
+                )
+                        ||
+                        input.isPressed(
+                                java.awt.event.KeyEvent.VK_DOWN
+                        )
+        ) {
+
             keys.append("DOWN ");
         }
 
-        if (input.isPressed(KeyEvent.VK_A)
-                || input.isPressed(KeyEvent.VK_LEFT)) {
+        if (
+                input.isPressed(
+                        java.awt.event.KeyEvent.VK_A
+                )
+                        ||
+                        input.isPressed(
+                                java.awt.event.KeyEvent.VK_LEFT
+                        )
+        ) {
+
             keys.append("LEFT ");
         }
 
-        if (input.isPressed(KeyEvent.VK_D)
-                || input.isPressed(KeyEvent.VK_RIGHT)) {
+        if (
+                input.isPressed(
+                        java.awt.event.KeyEvent.VK_D
+                )
+                        ||
+                        input.isPressed(
+                                java.awt.event.KeyEvent.VK_RIGHT
+                        )
+        ) {
+
             keys.append("RIGHT ");
         }
 
-        if (keys.length() == "Keys: ".length()) {
+        if (
+                keys.length()
+                        == "Keys: ".length()
+        ) {
+
             keys.append("NONE");
         }
 

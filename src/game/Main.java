@@ -4,8 +4,8 @@ import javax.swing.*;
 import java.awt.*;
 
 public class Main {
-    private static final int SCREEN_WIDTH = 960;
-    private static final int SCREEN_HEIGHT = 576;
+    public static final int SCREEN_WIDTH = 960;
+    public static final int SCREEN_HEIGHT = 576;
 
     private Main() {
     }
@@ -17,7 +17,7 @@ public class Main {
          *
          * This must run before Swing or AWT creates a window.
          */
-        System.setProperty("sun.java2d.uiScale", "1.5");
+        //System.setProperty("sun.java2d.uiScale", "1.5");
         SwingUtilities.invokeLater(Main::startGame);
     }
 

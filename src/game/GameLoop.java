@@ -2,7 +2,7 @@ package game;
 
 import java.util.concurrent.locks.LockSupport;
 
-public class GameLoop implements Runnable{
+public class GameLoop implements Runnable {
 
     private static final double TARGET_UPS = 60.0;
     private static final double TARGET_FPS = 60.0;
@@ -103,10 +103,7 @@ public class GameLoop implements Runnable{
             while (updateDelta >= 1
                     && updatesPerformed < MAX_UPDATES_PER_CYCLE) {
                 //gameloop update
-                game.update(
-                        SECONDS_PER_UPDATE,
-                        gameCanvas.getWidth(),
-                        gameCanvas.getHeight());
+                game.update(SECONDS_PER_UPDATE);
 
                 updateDelta--;
                 updatesPerformed++;

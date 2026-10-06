@@ -3,37 +3,44 @@ package game.world;
 import game.tile.TileManager;
 import game.tile.TileType;
 
-import java.awt.*;
-import java.io.IOException;
-import java.util.List;
+import java.awt.Graphics2D;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.List;
 
 public class WorldMap {
 
-    private TileManager tileManager;
+    private final TileManager tileManager;
 
     private TileType[][] groundMap;
     private TileType[][] objectMap;
 
-    public WorldMap(TileManager tileManager) {
+    private int worldWidth;
+    private int worldHeight;
+
+    public WorldMap(
+            TileManager tileManager
+    ) {
 
         this.tileManager = tileManager;
 
         loadMaps();
+
+        calculateWorldSize();
     }
 
     private void loadMaps() {
 
         groundMap = loadMap(
-                "/maps/ground01.txt",
+                "/maps/worldground01.txt",
                 false
         );
 
         objectMap = loadMap(
-                "/maps/objects01.txt",
+                "/maps/worldobjects01.txt",
                 true
         );
     }
@@ -43,27 +50,38 @@ public class WorldMap {
             boolean objectLayer
     ) {
 
-        List<TileType[]> rows = new ArrayList<>();
+        List<TileType[]> rows =
+                new ArrayList<>();
 
-        try (InputStream inputStream =
-                     getClass().getResourceAsStream(resourcePath)) {
+        try (
+                InputStream inputStream =
+                        getClass().getResourceAsStream(
+                                resourcePath
+                        )
+        ) {
 
             if (inputStream == null) {
+
                 throw new IOException(
-                        "Could not find map: " + resourcePath
+                        "Could not find map: "
+                                + resourcePath
                 );
             }
 
             BufferedReader reader =
                     new BufferedReader(
-                            new InputStreamReader(inputStream)
+                            new InputStreamReader(
+                                    inputStream
+                            )
                     );
 
             String line;
 
             while ((line = reader.readLine()) != null) {
 
-                // Ignore empty lines
+                /*
+                 * Ignore empty lines.
+                 */
                 if (line.isEmpty()) {
                     continue;
                 }
@@ -71,9 +89,14 @@ public class WorldMap {
                 TileType[] row =
                         new TileType[line.length()];
 
-                for (int col = 0; col < line.length(); col++) {
+                for (
+                        int col = 0;
+                        col < line.length();
+                        col++
+                ) {
 
-                    char symbol = line.charAt(col);
+                    char symbol =
+                            line.charAt(col);
 
                     row[col] =
                             convertCharToTile(
@@ -87,10 +110,16 @@ public class WorldMap {
 
         } catch (IOException e) {
 
-            e.printStackTrace();
+            throw new IllegalStateException(
+                    "Failed to load map: "
+                            + resourcePath,
+                    e
+            );
         }
 
-        return rows.toArray(new TileType[0][]);
+        return rows.toArray(
+                new TileType[0][]
+        );
     }
 
     private TileType convertCharToTile(
@@ -102,86 +131,340 @@ public class WorldMap {
 
             return switch (symbol) {
 
-                case 'T' -> TileType.TREE;
-                case 'R' -> TileType.ROCK;
+                case 'T' ->
+                        TileType.TREE;
 
-                // '.' means no object
-                case '.' -> null;
+                case 'R' ->
+                        TileType.ROCK;
 
-                default -> null;
+                /*
+                 * No object.
+                 */
+                case '.' ->
+                        null;
+
+                default ->
+                        null;
             };
 
         } else {
 
             return switch (symbol) {
 
-                case 'G' -> TileType.GRASS;
-                case 'E' -> TileType.EARTH;
+                case 'G' ->
+                        TileType.GRASS;
 
-                default -> TileType.GRASS;
+                case 'E' ->
+                        TileType.EARTH;
+
+                default ->
+                        TileType.GRASS;
             };
         }
     }
 
-    private void renderGround(Graphics2D g) {
+    /**
+     * Calculates the total WORLD size
+     * using the ground map.
+     */
+    private void calculateWorldSize() {
 
-        for (int row = 0; row < groundMap.length; row++) {
+        int columnCount = 0;
 
-            for (int col = 0; col < groundMap[row].length; col++) {
+        for (TileType[] row : groundMap) {
+
+            columnCount =
+                    Math.max(
+                            columnCount,
+                            row.length
+                    );
+        }
+
+        worldWidth =
+                columnCount
+                        * TileManager.TILE_SIZE;
+
+        worldHeight =
+                groundMap.length
+                        * TileManager.TILE_SIZE;
+    }
+
+    /**
+     * Renders the visible portion
+     * of the world.
+     */
+    public void render(
+            Graphics2D graphics,
+            Camera camera
+    ) {
+
+        renderGround(
+                graphics,
+                camera
+        );
+
+        renderObjects(
+                graphics,
+                camera
+        );
+    }
+
+    private void renderGround(
+            Graphics2D graphics,
+            Camera camera
+    ) {
+
+        int tileSize =
+                TileManager.TILE_SIZE;
+
+        /*
+         * Determine the first visible column.
+         */
+        int startColumn =
+                Math.max(
+                        0,
+                        (int)
+                                (camera.getX()
+                                        / tileSize)
+                );
+
+        /*
+         * Determine the last visible column.
+         */
+        int endColumn =
+                Math.min(
+                        getColumnCount(groundMap) - 1,
+
+                        (int)
+                                (
+                                        (
+                                                camera.getX()
+                                                        + camera.getScreenWidth()
+                                        )
+                                                / tileSize
+                                )
+                                + 1
+                );
+
+        /*
+         * Determine the first visible row.
+         */
+        int startRow =
+                Math.max(
+                        0,
+                        (int)
+                                (camera.getY()
+                                        / tileSize)
+                );
+
+        /*
+         * Determine the last visible row.
+         */
+        int endRow =
+                Math.min(
+                        groundMap.length - 1,
+
+                        (int)
+                                (
+                                        (
+                                                camera.getY()
+                                                        + camera.getScreenHeight()
+                                        )
+                                                / tileSize
+                                )
+                                + 1
+                );
+
+        for (
+                int row = startRow;
+                row <= endRow;
+                row++
+        ) {
+
+            for (
+                    int col = startColumn;
+                    col <= endColumn;
+                    col++
+            ) {
+
+                /*
+                 * Protect against rows
+                 * with different lengths.
+                 */
+                if (
+                        col >=
+                                groundMap[row].length
+                ) {
+                    continue;
+                }
 
                 TileType ground =
                         groundMap[row][col];
 
-                int x =
-                        col * TileManager.TILE_SIZE;
+                int worldX =
+                        col * tileSize;
 
-                int y =
-                        row * TileManager.TILE_SIZE;
+                int worldY =
+                        row * tileSize;
+
+                /*
+                 * Convert WORLD → SCREEN.
+                 */
+                int screenX =
+                        camera.worldToScreenX(
+                                worldX
+                        );
+
+                int screenY =
+                        camera.worldToScreenY(
+                                worldY
+                        );
 
                 tileManager.render(
-                        g,
+                        graphics,
                         ground,
-                        x,
-                        y
+                        screenX,
+                        screenY
                 );
             }
         }
     }
 
-    private void renderObjects(Graphics2D g) {
+    private void renderObjects(
+            Graphics2D graphics,
+            Camera camera
+    ) {
 
-        for (int row = 0; row < objectMap.length; row++) {
+        int tileSize =
+                TileManager.TILE_SIZE;
 
-            for (int col = 0; col < objectMap[row].length; col++) {
+        int startColumn =
+                Math.max(
+                        0,
+                        (int)
+                                (camera.getX()
+                                        / tileSize)
+                );
+
+        int endColumn =
+                Math.min(
+                        getColumnCount(objectMap) - 1,
+
+                        (int)
+                                (
+                                        (
+                                                camera.getX()
+                                                        + camera.getScreenWidth()
+                                        )
+                                                / tileSize
+                                )
+                                + 1
+                );
+
+        int startRow =
+                Math.max(
+                        0,
+                        (int)
+                                (camera.getY()
+                                        / tileSize)
+                );
+
+        int endRow =
+                Math.min(
+                        objectMap.length - 1,
+
+                        (int)
+                                (
+                                        (
+                                                camera.getY()
+                                                        + camera.getScreenHeight()
+                                        )
+                                                / tileSize
+                                )
+                                + 1
+                );
+
+        for (
+                int row = startRow;
+                row <= endRow;
+                row++
+        ) {
+
+            for (
+                    int col = startColumn;
+                    col <= endColumn;
+                    col++
+            ) {
+
+                if (
+                        col >=
+                                objectMap[row].length
+                ) {
+                    continue;
+                }
 
                 TileType object =
                         objectMap[row][col];
 
-                // No object at this position
+                /*
+                 * No tree/rock/etc.
+                 */
                 if (object == null) {
                     continue;
                 }
 
-                int x =
-                        col * TileManager.TILE_SIZE;
+                int worldX =
+                        col * tileSize;
 
-                int y =
-                        row * TileManager.TILE_SIZE;
+                int worldY =
+                        row * tileSize;
+
+                /*
+                 * Convert WORLD → SCREEN.
+                 */
+                int screenX =
+                        camera.worldToScreenX(
+                                worldX
+                        );
+
+                int screenY =
+                        camera.worldToScreenY(
+                                worldY
+                        );
 
                 tileManager.render(
-                        g,
+                        graphics,
                         object,
-                        x,
-                        y
+                        screenX,
+                        screenY
                 );
             }
         }
     }
 
-    public void render(Graphics2D g) {
+    private int getColumnCount(
+            TileType[][] map
+    ) {
 
-        renderGround(g);
+        int columns = 0;
 
-        renderObjects(g);
+        for (TileType[] row : map) {
+
+            columns =
+                    Math.max(
+                            columns,
+                            row.length
+                    );
+        }
+
+        return columns;
+    }
+
+    public int getWorldWidth() {
+        return worldWidth;
+    }
+
+    public int getWorldHeight() {
+        return worldHeight;
     }
 }
