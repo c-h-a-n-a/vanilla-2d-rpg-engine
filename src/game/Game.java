@@ -50,7 +50,8 @@ public class Game {
          * Update player movement.
          */
         player.update(
-                deltaTime
+                deltaTime,
+                worldMap
         );
 
         /*

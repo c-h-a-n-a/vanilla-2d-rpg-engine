@@ -1,5 +1,7 @@
 package game.entity;
 
+import game.world.WorldMap;
+
 public abstract class Entity {
 
     protected double x;
@@ -20,7 +22,10 @@ public abstract class Entity {
         this.height = height;
     }
 
-    public abstract void update(double deltaTime);
+    public abstract void update(
+            double deltaTime,
+            WorldMap worldMap
+    );
 
     public double getX() {
         return x;

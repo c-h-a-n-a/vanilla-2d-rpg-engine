@@ -20,6 +20,7 @@ public class WorldMap {
 
     private int worldWidth;
     private int worldHeight;
+    private CollisionDebugInfo collisionDebugInfo;
 
     public WorldMap(
             TileManager tileManager
@@ -460,11 +461,183 @@ public class WorldMap {
         return columns;
     }
 
+    /**
+     * Checks whether a WORLD rectangle
+     * overlaps a solid object tile.
+     */
+    public boolean isBlocked(
+            double x,
+            double y,
+            double width,
+            double height
+    ) {
+
+        int tileSize =
+                TileManager.TILE_SIZE;
+
+        /*
+         * Determine the first tile that
+         * the rectangle can overlap.
+         */
+        int startColumn =
+                Math.max(
+                        0,
+                        (int) Math.floor(
+                                x / tileSize
+                        )
+                );
+
+        /*
+         * -0.001 prevents a rectangle whose
+         * right edge is exactly on a tile
+         * boundary from checking the next tile.
+         */
+        int endColumn =
+                Math.min(
+                        getColumnCount(objectMap) - 1,
+                        (int) Math.floor(
+                                (x + width - 0.001)
+                                        / tileSize
+                        )
+                );
+
+        int startRow =
+                Math.max(
+                        0,
+                        (int) Math.floor(
+                                y / tileSize
+                        )
+                );
+
+        int endRow =
+                Math.min(
+                        objectMap.length - 1,
+                        (int) Math.floor(
+                                (y + height - 0.001)
+                                        / tileSize
+                        )
+                );
+
+        /*
+         * Assume there is no collision.
+         */
+        collisionDebugInfo =
+                new CollisionDebugInfo(
+                        x,
+                        y,
+                        width,
+                        height,
+                        startColumn,
+                        endColumn,
+                        startRow,
+                        endRow,
+                        false,
+                        null,
+                        -1,
+                        -1
+                );
+        /*
+         * Check only the tiles that the
+         * player rectangle could overlap.
+         */
+        for (
+                int row = startRow;
+                row <= endRow;
+                row++
+        ) {
+
+            for (
+                    int col = startColumn;
+                    col <= endColumn;
+                    col++
+            ) {
+
+                /*
+                 * Protect against irregular
+                 * map rows.
+                 */
+                if (
+                        col >= objectMap[row].length
+                ) {
+                    continue;
+                }
+
+                TileType tile =
+                        objectMap[row][col];
+
+                /*
+                 * No object in this tile.
+                 */
+                if (tile == null) {
+                    continue;
+                }
+
+                /*
+                 * Object exists but isn't solid.
+                 */
+                if (!tile.isSolid()) {
+                    continue;
+                }
+
+                /*
+                 * World rectangle occupied
+                 * by this tile.
+                 */
+                double tileX =
+                        col * tileSize;
+
+                double tileY =
+                        row * tileSize;
+
+                /*
+                 * AABB collision check.
+                 */
+                boolean overlaps =
+                        x < tileX + tileSize
+                                && x + width > tileX
+                                && y < tileY + tileSize
+                                && y + height > tileY;
+
+                if (overlaps) {
+                    /*
+                     * Remember the collision.
+                     */
+                    collisionDebugInfo =
+                            new CollisionDebugInfo(
+                                    x,
+                                    y,
+                                    width,
+                                    height,
+                                    startColumn,
+                                    endColumn,
+                                    startRow,
+                                    endRow,
+                                    true,
+                                    tile,
+                                    col,
+                                    row
+                            );
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public CollisionDebugInfo getCollisionDebugInfo() {
+        return collisionDebugInfo;
+    }
+
     public int getWorldWidth() {
         return worldWidth;
     }
 
     public int getWorldHeight() {
         return worldHeight;
+    }
+
+    public int getTileSize() {
+        return TileManager.TILE_SIZE;
     }
 }

@@ -1,6 +1,7 @@
 package game.entity;
 
 import game.KeyboardInput;
+import game.world.WorldMap;
 
 import java.awt.event.KeyEvent;
 
@@ -29,6 +30,8 @@ public class Player extends Entity {
     private double movementY;
 
     private double lastDeltaTime;
+    private boolean xCollision;
+    private boolean yCollision;
 
     public Player(
             double x,
@@ -43,13 +46,15 @@ public class Player extends Entity {
     }
 
     @Override
-    public void update(double deltaTime) {
+    public void update(
+            double deltaTime,
+            WorldMap worldMap) {
         lastDeltaTime = deltaTime;
 
         readMovementDirection();
         updateFacingDirection();
         normalizeDiagonalMovement();
-        move(deltaTime);
+        move(deltaTime, worldMap);
         updateAnimation(deltaTime);
     }
 
@@ -105,12 +110,69 @@ public class Player extends Entity {
         }
     }
 
-    private void move(double deltaTime) {
-        movementX = directionX * SPEED * deltaTime;
-        movementY = directionY * SPEED * deltaTime;
+    private void move(
+            double deltaTime,
+            WorldMap worldMap
+    ) {
 
-        x += movementX;
-        y += movementY;
+        movementX =
+                directionX
+                        * SPEED
+                        * deltaTime;
+
+        movementY =
+                directionY
+                        * SPEED
+                        * deltaTime;
+
+        /*
+         * Reset collision information
+         * for this frame.
+         */
+        xCollision = false;
+        yCollision = false;
+
+        /*
+         * ---------------------------------
+         * X MOVEMENT
+         * ---------------------------------
+         */
+
+        double nextX =
+                x + movementX;
+
+        xCollision =
+                worldMap.isBlocked(
+                        nextX,
+                        y,
+                        width,
+                        height
+                );
+
+        if (!xCollision) {
+            x = nextX;
+        }
+
+        /*
+         * ---------------------------------
+         * Y MOVEMENT
+         * ---------------------------------
+         */
+
+        double nextY =
+                y + movementY;
+
+        yCollision =
+                worldMap.isBlocked(
+                        x,
+                        nextY,
+                        width,
+                        height
+                );
+
+        if (!yCollision) {
+            y = nextY;
+        }
     }
 
     private void updateAnimation(double deltaTime) {
@@ -188,5 +250,12 @@ public class Player extends Entity {
 
     public int getAnimationFrame() {
         return animationFrame;
+    }
+    public boolean isXCollision() {
+        return xCollision;
+    }
+
+    public boolean isYCollision() {
+        return yCollision;
     }
 }

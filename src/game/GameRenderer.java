@@ -4,6 +4,7 @@ import game.entity.Direction;
 import game.entity.Player;
 import game.world.Camera;
 import game.world.WorldMap;
+import game.world.CollisionDebugInfo;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -116,6 +117,23 @@ public class GameRenderer {
                 graphics
         );
 
+        /*
+         * Collision visualization.
+         */
+        drawDebugCollisionTiles(
+                graphics
+        );
+
+        drawPlayerCollisionBox(
+                graphics
+        );
+
+        /*
+         * Debug information.
+         */
+        drawDebugCollisionPanel(
+                graphics
+        );
         // drawInstructions(graphics);
         // drawDebugPanel(graphics, fps);
     }
@@ -305,6 +323,35 @@ public class GameRenderer {
         );
     }
 
+    private void drawPlayerCollisionBox(
+            Graphics2D graphics
+    ) {
+
+        Player player =
+                game.getPlayer();
+
+        int screenX =
+                camera.worldToScreenX(
+                        player.getX()
+                );
+
+        int screenY =
+                camera.worldToScreenY(
+                        player.getY()
+                );
+
+        graphics.setColor(
+                Color.RED
+        );
+
+        graphics.drawRect(
+                screenX,
+                screenY,
+                player.getWidth(),
+                player.getHeight()
+        );
+    }
+
     private void drawInstructions(
             Graphics2D graphics
     ) {
@@ -317,6 +364,424 @@ public class GameRenderer {
                 "Move: WASD or Arrow Keys",
                 15,
                 25
+        );
+    }
+
+    private void drawDebugCollisionTiles(
+            Graphics2D graphics
+    ) {
+
+        CollisionDebugInfo debug =
+                worldMap.getCollisionDebugInfo();
+
+        if (debug == null) {
+            return;
+        }
+
+        int tileSize =
+                worldMap.getTileSize();
+
+        /*
+         * ---------------------------------
+         * DRAW TILES BEING CHECKED
+         * ---------------------------------
+         */
+
+        graphics.setColor(
+                new Color(
+                        255,
+                        255,
+                        0,
+                        70
+                )
+        );
+
+        for (
+                int row = debug.getStartRow();
+                row <= debug.getEndRow();
+                row++
+        ) {
+
+            for (
+                    int col = debug.getStartColumn();
+                    col <= debug.getEndColumn();
+                    col++
+            ) {
+
+                int worldX =
+                        col * tileSize;
+
+                int worldY =
+                        row * tileSize;
+
+                int screenX =
+                        camera.worldToScreenX(
+                                worldX
+                        );
+
+                int screenY =
+                        camera.worldToScreenY(
+                                worldY
+                        );
+
+                graphics.fillRect(
+                        screenX,
+                        screenY,
+                        tileSize,
+                        tileSize
+                );
+
+                graphics.setColor(
+                        Color.YELLOW
+                );
+
+                graphics.drawRect(
+                        screenX,
+                        screenY,
+                        tileSize,
+                        tileSize
+                );
+
+                graphics.setColor(
+                        new Color(
+                                255,
+                                255,
+                                0,
+                                70
+                        )
+                );
+            }
+        }
+
+        /*
+         * ---------------------------------
+         * HIGHLIGHT BLOCKING TILE
+         * ---------------------------------
+         */
+
+        if (debug.isBlocked()) {
+
+            int worldX =
+                    debug.getBlockingColumn()
+                            * tileSize;
+
+            int worldY =
+                    debug.getBlockingRow()
+                            * tileSize;
+
+            int screenX =
+                    camera.worldToScreenX(
+                            worldX
+                    );
+
+            int screenY =
+                    camera.worldToScreenY(
+                            worldY
+                    );
+
+            graphics.setColor(
+                    new Color(
+                            255,
+                            0,
+                            0,
+                            100
+                    )
+            );
+
+            graphics.fillRect(
+                    screenX,
+                    screenY,
+                    tileSize,
+                    tileSize
+            );
+
+            graphics.setColor(
+                    Color.RED
+            );
+
+            graphics.drawRect(
+                    screenX,
+                    screenY,
+                    tileSize,
+                    tileSize
+            );
+        }
+    }
+
+    private void drawDebugCollisionPanel(
+            Graphics2D graphics
+    ) {
+
+        Player player =
+                game.getPlayer();
+
+        CollisionDebugInfo debug =
+                worldMap.getCollisionDebugInfo();
+
+        int tileSize =
+                worldMap.getTileSize();
+
+        int panelX = 10;
+        int panelY = 40;
+        int panelWidth = 250;
+        int panelHeight = 300;
+
+        /*
+         * ---------------------------------
+         * BACKGROUND
+         * ---------------------------------
+         */
+
+        graphics.setColor(
+                new Color(
+                        0,
+                        0,
+                        0,
+                        210
+                )
+        );
+
+        graphics.fillRoundRect(
+                panelX,
+                panelY,
+                panelWidth,
+                panelHeight,
+                10,
+                10
+        );
+
+        /*
+         * ---------------------------------
+         * TEXT
+         * ---------------------------------
+         */
+
+        graphics.setColor(
+                Color.WHITE
+        );
+
+        int textX =
+                panelX + 15;
+
+        int textY =
+                panelY + 25;
+
+        int lineHeight = 19;
+
+        graphics.drawString(
+                "COLLISION DEBUG",
+                textX,
+                textY
+        );
+
+        /*
+         * PLAYER
+         */
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                String.format(
+                        "Player: X=%.2f Y=%.2f",
+                        player.getX(),
+                        player.getY()
+                ),
+                textX,
+                textY
+        );
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                String.format(
+                        "Size: W=%d H=%d",
+                        player.getWidth(),
+                        player.getHeight()
+                ),
+                textX,
+                textY
+        );
+
+        /*
+         * BOUNDS
+         */
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                String.format(
+                        "Left=%.2f Right=%.2f",
+                        player.getX(),
+                        player.getX()
+                                + player.getWidth()
+                ),
+                textX,
+                textY
+        );
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                String.format(
+                        "Top=%.2f Bottom=%.2f",
+                        player.getY(),
+                        player.getY()
+                                + player.getHeight()
+                ),
+                textX,
+                textY
+        );
+
+        /*
+         * TILE
+         */
+
+        int playerColumn =
+                (int) Math.floor(
+                        player.getX()
+                                / tileSize
+                );
+
+        int playerRow =
+                (int) Math.floor(
+                        player.getY()
+                                / tileSize
+                );
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                String.format(
+                        "Player Tile: [%d, %d]",
+                        playerColumn,
+                        playerRow
+                ),
+                textX,
+                textY
+        );
+
+        /*
+         * MOVEMENT
+         */
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                String.format(
+                        "Direction: X=%.2f Y=%.2f",
+                        player.getDirectionX(),
+                        player.getDirectionY()
+                ),
+                textX,
+                textY
+        );
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                String.format(
+                        "Movement: X=%.2f Y=%.2f",
+                        player.getMovementX(),
+                        player.getMovementY()
+                ),
+                textX,
+                textY
+        );
+
+        /*
+         * NEXT POSITION
+         */
+
+        double nextX =
+                player.getX()
+                        + player.getMovementX();
+
+        double nextY =
+                player.getY()
+                        + player.getMovementY();
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                String.format(
+                        "Next Position: X=%.2f Y=%.2f",
+                        nextX,
+                        nextY
+                ),
+                textX,
+                textY
+        );
+
+        /*
+         * TILES CHECKED
+         */
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                "Tiles checked:",
+                textX,
+                textY
+        );
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                String.format(
+                        "Columns: %d -> %d",
+                        debug.getStartColumn(),
+                        debug.getEndColumn()
+                ),
+                textX + 15,
+                textY
+        );
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                String.format(
+                        "Rows: %d -> %d",
+                        debug.getStartRow(),
+                        debug.getEndRow()
+                ),
+                textX + 15,
+                textY
+        );
+
+        /*
+         * ---------------------------------
+         * COLLISION RESULT
+         * ---------------------------------
+         */
+
+        textY += lineHeight;
+
+        graphics.setColor(
+                player.isXCollision()
+                        ? Color.RED
+                        : Color.GREEN
+        );
+
+        graphics.drawString(
+                "X Collision: "
+                        + player.isXCollision(),
+                textX,
+                textY
+        );
+
+        textY += lineHeight;
+
+        graphics.setColor(
+                player.isYCollision()
+                        ? Color.RED
+                        : Color.GREEN
+        );
+
+        graphics.drawString(
+                "Y Collision: "
+                        + player.isYCollision(),
+                textX,
+                textY
         );
     }
 
