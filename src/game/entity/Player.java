@@ -1,6 +1,7 @@
 package game.entity;
 
 import game.KeyboardInput;
+import game.world.CollisionDebugInfo;
 import game.world.WorldMap;
 
 import java.awt.event.KeyEvent;
@@ -8,6 +9,22 @@ import java.awt.event.KeyEvent;
 public class Player extends Entity {
 
     private static final double SPEED = 200.0;
+    private static final int COLLISION_WIDTH = 32;
+    private static final int COLLISION_HEIGHT = 20;
+
+    private static final int COLLISION_OFFSET_X = 16;
+    private static final int COLLISION_OFFSET_Y = 40;
+    /*
+     * Stores the collision information for
+     * horizontal movement.
+     */
+    private CollisionDebugInfo xCollisionDebugInfo;
+
+    /*
+     * Stores the collision information for
+     * vertical movement.
+     */
+    private CollisionDebugInfo yCollisionDebugInfo;
     /*
      * Each animation image remains visible for 0.15 seconds.
      */
@@ -143,11 +160,18 @@ public class Player extends Entity {
 
         xCollision =
                 worldMap.isBlocked(
-                        nextX,
-                        y,
-                        width,
-                        height
+                        nextX + COLLISION_OFFSET_X,
+                        y + COLLISION_OFFSET_Y,
+                        COLLISION_WIDTH,
+                        COLLISION_HEIGHT
                 );
+
+        /*
+         * Save the debug information produced
+         * by the X collision check.
+         */
+        xCollisionDebugInfo =
+                worldMap.getCollisionDebugInfo();
 
         if (!xCollision) {
             x = nextX;
@@ -164,11 +188,18 @@ public class Player extends Entity {
 
         yCollision =
                 worldMap.isBlocked(
-                        x,
-                        nextY,
-                        width,
-                        height
+                        x + COLLISION_OFFSET_X,
+                        nextY + COLLISION_OFFSET_Y,
+                        COLLISION_WIDTH,
+                        COLLISION_HEIGHT
                 );
+
+        /*
+         * Save the debug information produced
+         * by the Y collision check.
+         */
+        yCollisionDebugInfo =
+                worldMap.getCollisionDebugInfo();
 
         if (!yCollision) {
             y = nextY;
@@ -258,4 +289,13 @@ public class Player extends Entity {
     public boolean isYCollision() {
         return yCollision;
     }
+    public CollisionDebugInfo getXCollisionDebugInfo() {
+        return xCollisionDebugInfo;
+    }
+
+    public CollisionDebugInfo getYCollisionDebugInfo() {
+        return yCollisionDebugInfo;
+    }
+
+
 }

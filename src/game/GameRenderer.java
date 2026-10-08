@@ -3,8 +3,8 @@ package game;
 import game.entity.Direction;
 import game.entity.Player;
 import game.world.Camera;
-import game.world.WorldMap;
 import game.world.CollisionDebugInfo;
+import game.world.WorldMap;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -120,20 +120,14 @@ public class GameRenderer {
         /*
          * Collision visualization.
          */
-        drawDebugCollisionTiles(
-                graphics
-        );
+        drawDebugCollisionTiles(graphics);
 
-        drawPlayerCollisionBox(
-                graphics
-        );
+        drawPlayerCollisionBox(graphics);
 
         /*
          * Debug information.
          */
-        drawDebugCollisionPanel(
-                graphics
-        );
+        //drawDebugCollisionPanel(graphics);
         // drawInstructions(graphics);
         // drawDebugPanel(graphics, fps);
     }
@@ -330,14 +324,22 @@ public class GameRenderer {
         Player player =
                 game.getPlayer();
 
+        int collisionWidth = 32;
+        int collisionHeight = 20;
+
+        int collisionOffsetX = 16;
+        int collisionOffsetY = 40;
+
         int screenX =
                 camera.worldToScreenX(
                         player.getX()
+                                + collisionOffsetX
                 );
 
         int screenY =
                 camera.worldToScreenY(
                         player.getY()
+                                + collisionOffsetY
                 );
 
         graphics.setColor(
@@ -347,8 +349,8 @@ public class GameRenderer {
         graphics.drawRect(
                 screenX,
                 screenY,
-                player.getWidth(),
-                player.getHeight()
+                collisionWidth,
+                collisionHeight
         );
     }
 
@@ -371,9 +373,56 @@ public class GameRenderer {
             Graphics2D graphics
     ) {
 
-        CollisionDebugInfo debug =
-                worldMap.getCollisionDebugInfo();
+        Player player =
+                game.getPlayer();
 
+        /*
+         * ---------------------------------
+         * X COLLISION DEBUG
+         * ---------------------------------
+         *
+         * This is the collision check for
+         * LEFT / RIGHT movement.
+         *
+         * Yellow = tiles being checked.
+         * Red    = tile blocking movement.
+         */
+        drawCollisionDebugInfo(
+                graphics,
+                player.getXCollisionDebugInfo(),
+                Color.YELLOW,
+                Color.RED
+        );
+
+        /*
+         * ---------------------------------
+         * Y COLLISION DEBUG
+         * ---------------------------------
+         *
+         * This is the collision check for
+         * UP / DOWN movement.
+         *
+         * Cyan    = tiles being checked.
+         * Magenta = tile blocking movement.
+         */
+        drawCollisionDebugInfo(
+                graphics,
+                player.getYCollisionDebugInfo(),
+                Color.CYAN,
+                Color.MAGENTA
+        );
+    }
+
+    private void drawCollisionDebugInfo(
+            Graphics2D graphics,
+            CollisionDebugInfo debug,
+            Color checkedColor,
+            Color blockedColor
+    ) {
+
+        /*
+         * There is no debug information yet.
+         */
         if (debug == null) {
             return;
         }
@@ -389,9 +438,9 @@ public class GameRenderer {
 
         graphics.setColor(
                 new Color(
-                        255,
-                        255,
-                        0,
+                        checkedColor.getRed(),
+                        checkedColor.getGreen(),
+                        checkedColor.getBlue(),
                         70
                 )
         );
@@ -424,6 +473,9 @@ public class GameRenderer {
                                 worldY
                         );
 
+                /*
+                 * Transparent fill.
+                 */
                 graphics.fillRect(
                         screenX,
                         screenY,
@@ -431,8 +483,11 @@ public class GameRenderer {
                         tileSize
                 );
 
+                /*
+                 * Solid outline.
+                 */
                 graphics.setColor(
-                        Color.YELLOW
+                        checkedColor
                 );
 
                 graphics.drawRect(
@@ -442,11 +497,15 @@ public class GameRenderer {
                         tileSize
                 );
 
+                /*
+                 * Restore transparent color
+                 * for the next tile.
+                 */
                 graphics.setColor(
                         new Color(
-                                255,
-                                255,
-                                0,
+                                checkedColor.getRed(),
+                                checkedColor.getGreen(),
+                                checkedColor.getBlue(),
                                 70
                         )
                 );
@@ -479,11 +538,14 @@ public class GameRenderer {
                             worldY
                     );
 
+            /*
+             * Transparent blocked-tile fill.
+             */
             graphics.setColor(
                     new Color(
-                            255,
-                            0,
-                            0,
+                            blockedColor.getRed(),
+                            blockedColor.getGreen(),
+                            blockedColor.getBlue(),
                             100
                     )
             );
@@ -495,8 +557,11 @@ public class GameRenderer {
                     tileSize
             );
 
+            /*
+             * Solid blocked-tile outline.
+             */
             graphics.setColor(
-                    Color.RED
+                    blockedColor
             );
 
             graphics.drawRect(
@@ -524,7 +589,7 @@ public class GameRenderer {
         int panelX = 10;
         int panelY = 40;
         int panelWidth = 250;
-        int panelHeight = 300;
+        int panelHeight = 400;
 
         /*
          * ---------------------------------
@@ -598,6 +663,33 @@ public class GameRenderer {
                         player.getWidth(),
                         player.getHeight()
                 ),
+                textX,
+                textY
+        );
+        textY += lineHeight;
+
+        graphics.drawString(
+                String.format(
+                        "Sprite: W=%d H=%d",
+                        player.getWidth(),
+                        player.getHeight()
+                ),
+                textX,
+                textY
+        );
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                "Collision: W=32 H=20",
+                textX,
+                textY
+        );
+
+        textY += lineHeight;
+
+        graphics.drawString(
+                "Collision Offset: X=16 Y=40",
                 textX,
                 textY
         );
