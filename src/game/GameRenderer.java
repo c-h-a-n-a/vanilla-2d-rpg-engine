@@ -4,6 +4,7 @@ import game.entity.Direction;
 import game.entity.Player;
 import game.world.Camera;
 import game.world.CollisionDebugInfo;
+import game.world.DungeonMap;
 import game.world.WorldMap;
 
 import javax.imageio.ImageIO;
@@ -24,6 +25,7 @@ public class GameRenderer {
             > playerSprites;
 
     private final WorldMap worldMap;
+    //private final DungeonMap dungeonMap;
 
     private final Camera camera;
 
@@ -42,8 +44,9 @@ public class GameRenderer {
         /*
          * World comes from Game.
          */
-        this.worldMap =
-                game.getWorldMap();
+        this.worldMap = game.getWorldMap();
+
+        //this.dungeonMap = game.getDungeonMap();
 
         /*
          * Camera uses the actual
@@ -120,9 +123,9 @@ public class GameRenderer {
         /*
          * Collision visualization.
          */
-        drawDebugCollisionTiles(graphics);
+        //drawDebugCollisionTiles(graphics);
 
-        drawPlayerCollisionBox(graphics);
+        //drawPlayerCollisionBox(graphics);
 
         /*
          * Debug information.
@@ -254,9 +257,9 @@ public class GameRenderer {
 
         graphics.setColor(
                 new Color(
-                        45,
-                        120,
-                        65
+                        8,
+                        14,
+                        9
                 )
         );
 

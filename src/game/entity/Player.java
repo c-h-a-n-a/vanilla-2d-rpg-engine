@@ -2,6 +2,7 @@ package game.entity;
 
 import game.KeyboardInput;
 import game.world.CollisionDebugInfo;
+import game.world.DungeonMap;
 import game.world.WorldMap;
 
 import java.awt.event.KeyEvent;

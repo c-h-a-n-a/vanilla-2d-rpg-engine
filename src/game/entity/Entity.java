@@ -1,5 +1,6 @@
 package game.entity;
 
+import game.world.DungeonMap;
 import game.world.WorldMap;
 
 public abstract class Entity {

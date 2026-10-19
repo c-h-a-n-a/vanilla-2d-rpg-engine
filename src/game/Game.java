@@ -2,6 +2,7 @@ package game;
 
 import game.entity.Player;
 import game.tile.TileManager;
+import game.world.DungeonMap;
 import game.world.WorldMap;
 
 public class Game {
@@ -9,6 +10,7 @@ public class Game {
     private final Player player;
     private final KeyboardInput input;
     private final WorldMap worldMap;
+    //private final DungeonMap dungeonMap;
 
     public Game(
             KeyboardInput input
@@ -26,6 +28,9 @@ public class Game {
                 new WorldMap(
                         tileManager
                 );
+//        dungeonMap = new DungeonMap(
+//                tileManager
+//        );
 
         /*
          * Player position is a WORLD position.
@@ -34,7 +39,7 @@ public class Game {
          * y = 200
          */
         player = new Player(
-                1000,
+                400,
                 400,
                 64,
                 64,
@@ -62,6 +67,10 @@ public class Game {
                 worldMap.getWorldWidth(),
                 worldMap.getWorldHeight()
         );
+//        player.keepInside(
+//                dungeonMap.getWorldWidth(),
+//                dungeonMap.getWorldHeight()
+//        );
     }
 
     public Player getPlayer() {
@@ -75,4 +84,8 @@ public class Game {
     public WorldMap getWorldMap() {
         return worldMap;
     }
+
+//    public DungeonMap getDungeonMap() {
+//        return dungeonMap;
+//    }
 }
