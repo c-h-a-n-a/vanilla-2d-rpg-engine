@@ -1,76 +1,42 @@
 package game;
 
+import game.config.GameConfig;
+import game.core.GameCanvas;
+import game.core.GameLoop;
+import game.core.GameWindow;
+import game.input.KeyboardInput;
+import game.render.GameRenderer;
+import game.state.Game;
+
 import javax.swing.*;
-import java.awt.*;
 
 public class Main {
-    public static final int SCREEN_WIDTH = 960;
-    public static final int SCREEN_HEIGHT = 576;
-
     private Main() {
     }
 
     public static void main(String[] args) {
-        /*
-         * Keep Java's coordinate scale consistent when moving
-         * between monitors with different Windows scaling.
-         *
-         * This must run before Swing or AWT creates a window.
-         */
-        //System.setProperty("sun.java2d.uiScale", "1.5");
+        // Uncomment to force a UI scale (must run before Swing/AWT creates a window):
+        // System.setProperty("sun.java2d.uiScale", "1.5");
         SwingUtilities.invokeLater(Main::startGame);
     }
 
     private static void startGame() {
-        KeyboardInput keyboardInput = new KeyboardInput();
+        KeyboardInput input = new KeyboardInput();
 
-        GameCanvas gameCanvas = new GameCanvas(
-                SCREEN_WIDTH,
-                SCREEN_HEIGHT
-        );
+        GameCanvas canvas = new GameCanvas(GameConfig.SCREEN_WIDTH, GameConfig.SCREEN_HEIGHT);
+        canvas.addKeyListener(input);
+        canvas.addFocusListener(input);
 
-        gameCanvas.addKeyListener(keyboardInput);
-        gameCanvas.addFocusListener(keyboardInput);
-
-        Game game = new Game(keyboardInput);
+        Game game = new Game(input);
         GameRenderer renderer = new GameRenderer(game);
+        GameLoop loop = new GameLoop(game, canvas, renderer);
 
-        GameLoop gameLoop = new GameLoop(
-                game,
-                gameCanvas,
-                renderer
-        );
+        GameWindow window = new GameWindow(GameConfig.WINDOW_TITLE, canvas, loop::stop);
+        window.open();
 
-        JFrame window = new JFrame("My 2D RPG");
+        // The canvas must be visible before its BufferStrategy can be created.
+        canvas.initialize();
 
-        window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        window.setLayout(new BorderLayout());
-
-        /*
-         * If Windows briefly exposes the frame background,
-         * it will be black instead of white.
-         */
-        window.getContentPane().setBackground(Color.BLACK);
-        window.add(gameCanvas, BorderLayout.CENTER);
-        window.setResizable(false);
-
-
-        /*
-         * Sizes the JFrame according to the preferred
-         * size of the GameCanvas.
-         */
-        window.pack();
-
-        window.setLocationRelativeTo(null);
-        window.setVisible(true);
-
-        /*
-         * The canvas must already be visible before its
-         * BufferStrategy can be created.
-         */
-        gameCanvas.initialize();
-
-
-        gameLoop.start();
+        loop.start();
     }
 }

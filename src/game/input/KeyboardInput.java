@@ -1,5 +1,4 @@
-
-package game;
+package game.input;
 
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
@@ -35,6 +34,16 @@ public class KeyboardInput implements KeyListener, FocusListener {
 
     public synchronized boolean isPressed(int keyCode) {
         return pressedKeys.contains(keyCode);
+    }
+
+    /** True if at least one of the given keys is held down. */
+    public synchronized boolean isAnyPressed(int... keyCodes) {
+        for (int keyCode : keyCodes) {
+            if (pressedKeys.contains(keyCode)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

@@ -1,23 +1,14 @@
-
 package game.entity;
 
-import game.world.WorldMap;
+import game.world.GameMap;
 
 public class Npc extends Entity {
 
     private static final double DEFAULT_SPEED = 80.0;
 
-    // Match the player's collision box.
-    private static final int COLLISION_WIDTH = 32;
-    private static final int COLLISION_HEIGHT = 20;
-    private static final int COLLISION_OFFSET_X = 16;
-    private static final int COLLISION_OFFSET_Y = 40;
-
     private final String name;
     private final String[] dialogueLines;
     private final String portraitPath;
-
-    private Player player;
 
     private double[][] patrolPoints = new double[0][];
     private int waypointIndex;
@@ -25,20 +16,8 @@ public class Npc extends Entity {
 
     private boolean paused;
 
-    public Npc(
-            double x,
-            double y,
-            int width,
-            int height,
-            String name,
-            String dialogue
-    ) {
-        this(
-                x, y, width, height,
-                name,
-                new String[]{dialogue},
-                null
-        );
+    public Npc(double x, double y, int width, int height, String name, String dialogue) {
+        this(x, y, width, height, name, new String[]{dialogue}, null);
     }
 
     public Npc(
@@ -52,6 +31,10 @@ public class Npc extends Entity {
     ) {
         super(x, y, width, height);
 
+        if (dialogueLines == null || dialogueLines.length == 0) {
+            throw new IllegalArgumentException("An NPC needs at least one line of dialogue.");
+        }
+
         this.name = name;
         this.dialogueLines = dialogueLines.clone();
         this.portraitPath = portraitPath;
@@ -61,8 +44,8 @@ public class Npc extends Entity {
         return name;
     }
 
-    public String[] getDialogueLines() {
-        return dialogueLines.clone();
+    public int getDialogueLineCount() {
+        return dialogueLines.length;
     }
 
     public String getDialogueLine(int index) {
@@ -74,51 +57,31 @@ public class Npc extends Entity {
     }
 
     /**
-     * Gives this NPC a reference to the player
-     * so it can avoid walking into the player.
-     */
-    public void setPlayer(Player player) {
-        this.player = player;
-    }
-
-    /**
-     * Waypoints are world coordinates for the
-     * top-left corner of this NPC's sprite.
+     * Waypoints are WORLD coordinates for the top-left corner of the sprite.
      */
     public void setPatrolPoints(double[][] points) {
         if (points == null || points.length < 2) {
-            throw new IllegalArgumentException(
-                    "At least two patrol points are required."
-            );
+            throw new IllegalArgumentException("At least two patrol points are required.");
         }
 
         patrolPoints = new double[points.length][2];
 
         for (int i = 0; i < points.length; i++) {
             if (points[i] == null || points[i].length < 2) {
-                throw new IllegalArgumentException(
-                        "Each patrol point needs an x and y coordinate."
-                );
+                throw new IllegalArgumentException("Each patrol point needs an x and y coordinate.");
             }
 
             patrolPoints[i][0] = points[i][0];
             patrolPoints[i][1] = points[i][1];
         }
 
-        // If the first point is the NPC's starting
-        // position, begin by moving toward point 2.
-        if (isAtWaypoint(0)) {
-            waypointIndex = 1;
-        } else {
-            waypointIndex = 0;
-        }
+        // If the first point is where the NPC starts, head for point 2.
+        waypointIndex = isAtWaypoint(0) ? 1 : 0;
     }
 
     public void setSpeed(double speed) {
         if (speed <= 0) {
-            throw new IllegalArgumentException(
-                    "Speed must be greater than zero."
-            );
+            throw new IllegalArgumentException("Speed must be greater than zero.");
         }
 
         this.speed = speed;
@@ -129,117 +92,42 @@ public class Npc extends Entity {
     }
 
     @Override
-    public void update(double deltaTime, WorldMap worldMap) {
+    public void update(double deltaTime, GameMap map) {
         if (paused || patrolPoints.length < 2) {
             return;
         }
 
-        moveTowardWaypoint(deltaTime, worldMap);
-
-        // Keep the NPC within the world boundaries.
-
+        moveTowardWaypoint(deltaTime, map);
     }
 
-    private void moveTowardWaypoint(
-            double deltaTime,
-            WorldMap worldMap
-    ) {
-        double targetX = patrolPoints[waypointIndex][0];
-        double targetY = patrolPoints[waypointIndex][1];
-
-        double dx = targetX - x;
-        double dy = targetY - y;
+    private void moveTowardWaypoint(double deltaTime, GameMap map) {
+        double dx = patrolPoints[waypointIndex][0] - getX();
+        double dy = patrolPoints[waypointIndex][1] - getY();
 
         double distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Reached this waypoint: move to the next one.
         if (distance < 0.001) {
             advanceWaypoint();
             return;
         }
 
-        // Normalize the direction so diagonal movement
-        // is not faster than horizontal or vertical movement.
-        double directionX = dx / distance;
-        double directionY = dy / distance;
+        // Never overshoot the waypoint.
+        double step = Math.min(speed * deltaTime, distance);
 
-        double movement = Math.min(speed * deltaTime, distance);
+        moveBy(dx / distance * step, dy / distance * step, map);
 
-        double movementX = directionX * movement;
-        double movementY = directionY * movement;
-
-        // Check horizontal movement first.
-        double nextX = x + movementX;
-
-        if (!isBlockedByEnvironment(nextX, y, worldMap)
-                && !isBlockedByPlayer(nextX, y)) {
-            x = nextX;
-        }
-
-        // Then check vertical movement using the
-        // updated horizontal position.
-        double nextY = y + movementY;
-
-        if (!isBlockedByEnvironment(x, nextY, worldMap)
-                && !isBlockedByPlayer(x, nextY)) {
-            y = nextY;
-        }
-
-        // Only advance when the NPC actually reaches
-        // the target. A blocked NPC waits instead.
+        // Only advance on arrival. A blocked NPC simply waits.
         if (isAtWaypoint(waypointIndex)) {
             advanceWaypoint();
         }
     }
 
-    private boolean isBlockedByEnvironment(
-            double candidateX,
-            double candidateY,
-            WorldMap worldMap
-    ) {
-        return worldMap.isBlocked(
-                candidateX + COLLISION_OFFSET_X,
-                candidateY + COLLISION_OFFSET_Y,
-                COLLISION_WIDTH,
-                COLLISION_HEIGHT
-        );
-    }
-
-    private boolean isBlockedByPlayer(
-            double candidateX,
-            double candidateY
-    ) {
-        if (player == null) {
-            return false;
-        }
-
-        double npcLeft = candidateX + COLLISION_OFFSET_X;
-        double npcTop = candidateY + COLLISION_OFFSET_Y;
-
-        double playerLeft =
-                player.getX() + COLLISION_OFFSET_X;
-        double playerTop =
-                player.getY() + COLLISION_OFFSET_Y;
-
-        return npcLeft < playerLeft + COLLISION_WIDTH
-                && npcLeft + COLLISION_WIDTH > playerLeft
-                && npcTop < playerTop + COLLISION_HEIGHT
-                && npcTop + COLLISION_HEIGHT > playerTop;
-    }
-
     private boolean isAtWaypoint(int index) {
-        double targetX = patrolPoints[index][0];
-        double targetY = patrolPoints[index][1];
-
-        return Math.abs(x - targetX) < 0.5
-                && Math.abs(y - targetY) < 0.5;
+        return Math.abs(getX() - patrolPoints[index][0]) < 0.5
+                && Math.abs(getY() - patrolPoints[index][1]) < 0.5;
     }
 
     private void advanceWaypoint() {
-        waypointIndex++;
-
-        if (waypointIndex >= patrolPoints.length) {
-            waypointIndex = 0;
-        }
+        waypointIndex = (waypointIndex + 1) % patrolPoints.length;
     }
 }

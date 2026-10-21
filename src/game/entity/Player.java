@@ -1,38 +1,15 @@
 package game.entity;
 
-import game.KeyboardInput;
-import game.world.CollisionDebugInfo;
-import game.world.DungeonMap;
-import game.world.WorldMap;
-
-import java.awt.event.KeyEvent;
-import java.util.List;
+import game.world.GameMap;
 
 public class Player extends Entity {
 
     private static final double SPEED = 200.0;
-    private static final int COLLISION_WIDTH = 32;
-    private static final int COLLISION_HEIGHT = 20;
 
-    private static final int COLLISION_OFFSET_X = 16;
-    private static final int COLLISION_OFFSET_Y = 40;
-    /*
-     * Stores the collision information for
-     * horizontal movement.
-     */
-    private CollisionDebugInfo xCollisionDebugInfo;
-
-    /*
-     * Stores the collision information for
-     * vertical movement.
-     */
-    private CollisionDebugInfo yCollisionDebugInfo;
-    /*
-     * Each animation image remains visible for 0.15 seconds.
-     */
+    /** Each animation image stays visible this long (seconds). */
     private static final double ANIMATION_FRAME_TIME = 0.15;
-
     private static final int ANIMATION_FRAME_COUNT = 2;
+
     private Direction facingDirection = Direction.DOWN;
 
     private boolean moving;
@@ -40,76 +17,42 @@ public class Player extends Entity {
     private double animationTimer;
     private int animationFrame;
 
-    private final KeyboardInput input;
-
     private double directionX;
     private double directionY;
 
-    private double movementX;
-    private double movementY;
-
-    private double lastDeltaTime;
-    private boolean xCollision;
-    private boolean yCollision;
-    private List<? extends Entity> solidEntities = List.of();
-
-    public Player(
-            double x,
-            double y,
-            int width,
-            int height,
-            KeyboardInput input
-    ) {
+    public Player(double x, double y, int width, int height) {
         super(x, y, width, height);
+    }
 
-        this.input = input;
+    /**
+     * Tells the player where to walk this frame. Each axis is -1, 0 or 1.
+     * The player doesn't know about the keyboard: Game decides what the
+     * input means (for example, it sends 0,0 during a conversation).
+     */
+    public void setMoveIntent(int dx, int dy) {
+        directionX = dx;
+        directionY = dy;
     }
 
     @Override
-    public void update(
-            double deltaTime,
-            WorldMap worldMap) {
-        lastDeltaTime = deltaTime;
+    public void update(double deltaTime, GameMap map) {
+        moving = directionX != 0 || directionY != 0;
 
-        readMovementDirection();
         updateFacingDirection();
-        normalizeDiagonalMovement();
-        move(deltaTime, worldMap);
+
+        double scale = (directionX != 0 && directionY != 0) ? 1.0 / Math.sqrt(2) : 1.0;
+
+        moveBy(
+                directionX * scale * SPEED * deltaTime,
+                directionY * scale * SPEED * deltaTime,
+                map
+        );
+
         updateAnimation(deltaTime);
     }
 
-    private void readMovementDirection() {
-        directionX = 0;
-        directionY = 0;
-
-        if (input.isPressed(KeyEvent.VK_W)
-                || input.isPressed(KeyEvent.VK_UP)) {
-            directionY--;
-        }
-
-        if (input.isPressed(KeyEvent.VK_S)
-                || input.isPressed(KeyEvent.VK_DOWN)) {
-            directionY++;
-        }
-
-        if (input.isPressed(KeyEvent.VK_A)
-                || input.isPressed(KeyEvent.VK_LEFT)) {
-            directionX--;
-        }
-
-        if (input.isPressed(KeyEvent.VK_D)
-                || input.isPressed(KeyEvent.VK_RIGHT)) {
-            directionX++;
-        }
-
-        moving = directionX != 0 || directionY != 0;
-    }
-
+    /** Vertical direction has priority when moving diagonally. */
     private void updateFacingDirection() {
-        /*
-         * Vertical direction has priority when the player
-         * moves diagonally.
-         */
         if (directionY < 0) {
             facingDirection = Direction.UP;
         } else if (directionY > 0) {
@@ -121,169 +64,20 @@ public class Player extends Entity {
         }
     }
 
-    private void normalizeDiagonalMovement() {
-        if (directionX != 0 && directionY != 0) {
-            double diagonalScale = 1.0 / Math.sqrt(2);
-
-            directionX *= diagonalScale;
-            directionY *= diagonalScale;
-        }
-    }
-
-    private void move(
-            double deltaTime,
-            WorldMap worldMap
-    ) {
-
-        movementX =
-                directionX
-                        * SPEED
-                        * deltaTime;
-
-        movementY =
-                directionY
-                        * SPEED
-                        * deltaTime;
-
-        /*
-         * Reset collision information
-         * for this frame.
-         */
-        xCollision = false;
-        yCollision = false;
-
-        /*
-         * ---------------------------------
-         * X MOVEMENT
-         * ---------------------------------
-         */
-
-        double nextX =
-                x + movementX;
-
-        xCollision =
-                worldMap.isBlocked(
-                        nextX + COLLISION_OFFSET_X,
-                        y + COLLISION_OFFSET_Y,
-                        COLLISION_WIDTH,
-                        COLLISION_HEIGHT
-                )
-                        || isBlockedByEntity(
-                        nextX + COLLISION_OFFSET_X,
-                        y + COLLISION_OFFSET_Y,
-                        COLLISION_WIDTH,
-                        COLLISION_HEIGHT
-                );
-
-        /*
-         * Save the debug information produced
-         * by the X collision check.
-         */
-        xCollisionDebugInfo =
-                worldMap.getCollisionDebugInfo();
-
-        if (!xCollision) {
-            x = nextX;
-        }
-
-        /*
-         * ---------------------------------
-         * Y MOVEMENT
-         * ---------------------------------
-         */
-
-        double nextY =
-                y + movementY;
-
-        yCollision =
-                worldMap.isBlocked(
-                        x + COLLISION_OFFSET_X,
-                        nextY + COLLISION_OFFSET_Y,
-                        COLLISION_WIDTH,
-                        COLLISION_HEIGHT
-                )
-                        || isBlockedByEntity(
-                        x + COLLISION_OFFSET_X,
-                        nextY + COLLISION_OFFSET_Y,
-                        COLLISION_WIDTH,
-                        COLLISION_HEIGHT
-                );
-
-        /*
-         * Save the debug information produced
-         * by the Y collision check.
-         */
-        yCollisionDebugInfo =
-                worldMap.getCollisionDebugInfo();
-
-        if (!yCollision) {
-            y = nextY;
-        }
-    }
-
     private void updateAnimation(double deltaTime) {
         if (!moving) {
-            /*
-             * Return to the first frame when standing still.
-             */
+            // Standing still: show the first frame.
             animationFrame = 0;
             animationTimer = 0;
-
             return;
         }
 
         animationTimer += deltaTime;
 
         if (animationTimer >= ANIMATION_FRAME_TIME) {
-            animationFrame++;
-
-            /*
-             * With two frames:
-             *
-             * 0 → 1 → 0 → 1
-             */
-            animationFrame %= ANIMATION_FRAME_COUNT;
-
-            /*
-             * Keep any small leftover time.
-             */
+            animationFrame = (animationFrame + 1) % ANIMATION_FRAME_COUNT;
             animationTimer -= ANIMATION_FRAME_TIME;
         }
-    }
-
-    public void keepInside(
-            int boundaryWidth,
-            int boundaryHeight
-    ) {
-        double maximumX = boundaryWidth - width;
-        double maximumY = boundaryHeight - height;
-
-        x = Math.max(0, Math.min(x, maximumX));
-        y = Math.max(0, Math.min(y, maximumY));
-    }
-
-    public double getSpeed() {
-        return SPEED;
-    }
-
-    public double getDirectionX() {
-        return directionX;
-    }
-
-    public double getDirectionY() {
-        return directionY;
-    }
-
-    public double getMovementX() {
-        return movementX;
-    }
-
-    public double getMovementY() {
-        return movementY;
-    }
-
-    public double getLastDeltaTime() {
-        return lastDeltaTime;
     }
 
     public Direction getFacingDirection() {
@@ -297,111 +91,8 @@ public class Player extends Entity {
     public int getAnimationFrame() {
         return animationFrame;
     }
-    public boolean isXCollision() {
-        return xCollision;
+
+    public double getSpeed() {
+        return SPEED;
     }
-
-    public boolean isYCollision() {
-        return yCollision;
-    }
-    public CollisionDebugInfo getXCollisionDebugInfo() {
-        return xCollisionDebugInfo;
-    }
-
-    public CollisionDebugInfo getYCollisionDebugInfo() {
-        return yCollisionDebugInfo;
-    }
-
-    public void setSolidEntities(List<? extends Entity> solidEntities) {
-        this.solidEntities = solidEntities;
-    }
-
-
-    private boolean isBlockedByEntity(
-            double collisionX,
-            double collisionY,
-            double collisionWidth,
-            double collisionHeight
-    ) {
-        for (Entity entity : solidEntities) {
-
-            double entityX = entity.getX();
-            double entityY = entity.getY();
-            double entityWidth = entity.getWidth();
-            double entityHeight = entity.getHeight();
-
-            // Use the NPC's lower-body collision box
-            // instead of its entire sprite rectangle.
-            if (entity instanceof Npc) {
-                entityX += 16;
-                entityY += 40;
-                entityWidth = 32;
-                entityHeight = 20;
-            }
-
-            boolean overlaps =
-                    collisionX < entityX + entityWidth
-                            && collisionX + collisionWidth > entityX
-                            && collisionY < entityY + entityHeight
-                            && collisionY + collisionHeight > entityY;
-
-            if (overlaps) {
-
-                // If the player is already overlapping this
-                // entity, allow movement that reduces the overlap.
-                double currentX = x + COLLISION_OFFSET_X;
-                double currentY = y + COLLISION_OFFSET_Y;
-
-                double currentOverlapX = Math.max(
-                        0,
-                        Math.min(
-                                currentX + COLLISION_WIDTH,
-                                entityX + entityWidth
-                        ) - Math.max(currentX, entityX)
-                );
-
-                double currentOverlapY = Math.max(
-                        0,
-                        Math.min(
-                                currentY + COLLISION_HEIGHT,
-                                entityY + entityHeight
-                        ) - Math.max(currentY, entityY)
-                );
-
-                double candidateOverlapX = Math.max(
-                        0,
-                        Math.min(
-                                collisionX + collisionWidth,
-                                entityX + entityWidth
-                        ) - Math.max(collisionX, entityX)
-                );
-
-                double candidateOverlapY = Math.max(
-                        0,
-                        Math.min(
-                                collisionY + collisionHeight,
-                                entityY + entityHeight
-                        ) - Math.max(collisionY, entityY)
-                );
-
-                double currentOverlap =
-                        currentOverlapX * currentOverlapY;
-
-                double candidateOverlap =
-                        candidateOverlapX * candidateOverlapY;
-
-                if (currentOverlap > 0
-                        && candidateOverlap < currentOverlap) {
-                    continue;
-                }
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-
-
 }

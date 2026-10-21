@@ -1,27 +1,24 @@
 package game.entity;
 
-import game.world.WorldMap;
+import game.world.GameMap;
 
 public class Monster extends Entity {
 
-    public Monster(
-            double x,
-            double y,
-            int width,
-            int height
-    ) {
-        super(x, y, width, height);
+    private static final int SIZE = 64;
+
+    private final MonsterType type;
+
+    public Monster(MonsterType type, double x, double y) {
+        super(x, y, SIZE, SIZE);
+        this.type = type;
+    }
+
+    public MonsterType getType() {
+        return type;
     }
 
     @Override
-    public void update(
-            double deltaTime,
-            WorldMap worldMap
-    ) {
-        /*
-         * The monster is stationary for now.
-         * Patrol and chase behavior can be
-         * added later.
-         */
+    public void update(double deltaTime, GameMap map) {
+        // Stationary for now. Patrol and chase behaviour can be added later.
     }
 }

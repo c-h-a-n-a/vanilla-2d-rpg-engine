@@ -8,84 +8,38 @@ public class Camera {
     private final int screenWidth;
     private final int screenHeight;
 
-    public Camera(
-            int screenWidth,
-            int screenHeight
-    ) {
+    public Camera(int screenWidth, int screenHeight) {
         this.screenWidth = screenWidth;
         this.screenHeight = screenHeight;
     }
 
     /**
-     * Makes the camera follow the target.
-     *
-     * targetX and targetY are WORLD coordinates.
+     * Centres the camera on a WORLD position, without showing anything
+     * outside the world. If the world is smaller than the screen, it is
+     * centred instead.
      */
-    public void follow(
-            double targetX,
-            double targetY,
-            int worldWidth,
-            int worldHeight
-    ) {
-
-        /*
-         * Place the target at the center
-         * of the screen.
-         */
-        x = targetX - screenWidth / 2.0;
-        y = targetY - screenHeight / 2.0;
-
-        /*
-         * Prevent the camera from moving
-         * outside the world boundaries.
-         */
-        double maxX =
-                Math.max(
-                        0,
-                        worldWidth - screenWidth
-                );
-
-        double maxY =
-                Math.max(
-                        0,
-                        worldHeight - screenHeight
-                );
-
-        x = Math.max(
-                0,
-                Math.min(x, maxX)
-        );
-
-        y = Math.max(
-                0,
-                Math.min(y, maxY)
-        );
+    public void follow(double targetX, double targetY, int worldWidth, int worldHeight) {
+        x = followAxis(targetX, screenWidth, worldWidth);
+        y = followAxis(targetY, screenHeight, worldHeight);
     }
 
-    /**
-     * Converts a WORLD X position
-     * to a SCREEN X position.
-     */
-    public int worldToScreenX(
-            double worldX
-    ) {
+    private static double followAxis(double target, int screenSize, int worldSize) {
+        double max = worldSize - screenSize;
 
-        return (int) Math.round(
-                worldX - x
-        );
+        // World smaller than the screen: centre it (offset is negative).
+        if (max <= 0) {
+            return max / 2.0;
+        }
+
+        return Math.max(0, Math.min(target - screenSize / 2.0, max));
     }
 
-    /**
-     * Converts a WORLD Y position
-     * to a SCREEN Y position.
-     */
-    public int worldToScreenY(
-            double worldY
-    ) {
+    public int worldToScreenX(double worldX) {
+        return (int) Math.round(worldX - x);
+    }
 
-        return (int) Math.round(
-                worldY - y
-        );
+    public int worldToScreenY(double worldY) {
+        return (int) Math.round(worldY - y);
     }
 
     public double getX() {
