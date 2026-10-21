@@ -1,3 +1,4 @@
+
 package game;
 
 import java.awt.event.FocusEvent;
@@ -10,14 +11,21 @@ import java.util.Set;
 public class KeyboardInput implements KeyListener, FocusListener {
 
     private final Set<Integer> pressedKeys = new HashSet<>();
+    private final Set<Integer> justPressedKeys = new HashSet<>();
+
     @Override
-    public void keyTyped(java.awt.event.KeyEvent e) {
-        // Not used
+    public void keyTyped(KeyEvent e) {
+        // Not used.
     }
 
     @Override
     public synchronized void keyPressed(KeyEvent event) {
-        pressedKeys.add(event.getKeyCode());
+        int keyCode = event.getKeyCode();
+
+        // Only register a new press if the key wasn't already held.
+        if (pressedKeys.add(keyCode)) {
+            justPressedKeys.add(keyCode);
+        }
     }
 
     @Override
@@ -29,17 +37,21 @@ public class KeyboardInput implements KeyListener, FocusListener {
         return pressedKeys.contains(keyCode);
     }
 
-    @Override
-    public void focusGained(FocusEvent e) {
-
+    /**
+     * Returns true once for each new key press.
+     * The press is consumed when this method returns true.
+     */
+    public synchronized boolean consumeJustPressed(int keyCode) {
+        return justPressedKeys.remove(keyCode);
     }
 
     @Override
-    public void focusLost(FocusEvent e) {
-        /*
-         * Prevents a key from remaining "pressed" when
-         * the player switches to another window.
-         */
+    public void focusGained(FocusEvent e) {
+    }
+
+    @Override
+    public synchronized void focusLost(FocusEvent e) {
         pressedKeys.clear();
+        justPressedKeys.clear();
     }
 }

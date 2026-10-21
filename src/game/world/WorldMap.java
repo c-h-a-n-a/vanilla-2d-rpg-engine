@@ -132,34 +132,27 @@ public class WorldMap {
 
             return switch (symbol) {
 
-                case 'T' ->
-                        TileType.TREE;
+                case 'T' -> TileType.TREE;
 
-                case 'R' ->
-                        TileType.ROCK;
+                case 'R' -> TileType.ROCK;
 
                 /*
                  * No object.
                  */
-                case '.' ->
-                        null;
+                case '.' -> null;
 
-                default ->
-                        null;
+                default -> null;
             };
 
         } else {
 
             return switch (symbol) {
 
-                case 'G' ->
-                        TileType.GRASS;
+                case 'G' -> TileType.GRASS;
 
-                case 'E' ->
-                        TileType.EARTH;
+                case 'E' -> TileType.EARTH;
 
-                default ->
-                        TileType.GRASS;
+                default -> TileType.GRASS;
             };
         }
     }

@@ -6,6 +6,7 @@ import game.world.DungeonMap;
 import game.world.WorldMap;
 
 import java.awt.event.KeyEvent;
+import java.util.List;
 
 public class Player extends Entity {
 
@@ -50,6 +51,7 @@ public class Player extends Entity {
     private double lastDeltaTime;
     private boolean xCollision;
     private boolean yCollision;
+    private List<? extends Entity> solidEntities = List.of();
 
     public Player(
             double x,
@@ -165,6 +167,12 @@ public class Player extends Entity {
                         y + COLLISION_OFFSET_Y,
                         COLLISION_WIDTH,
                         COLLISION_HEIGHT
+                )
+                        || isBlockedByEntity(
+                        nextX + COLLISION_OFFSET_X,
+                        y + COLLISION_OFFSET_Y,
+                        COLLISION_WIDTH,
+                        COLLISION_HEIGHT
                 );
 
         /*
@@ -189,6 +197,12 @@ public class Player extends Entity {
 
         yCollision =
                 worldMap.isBlocked(
+                        x + COLLISION_OFFSET_X,
+                        nextY + COLLISION_OFFSET_Y,
+                        COLLISION_WIDTH,
+                        COLLISION_HEIGHT
+                )
+                        || isBlockedByEntity(
                         x + COLLISION_OFFSET_X,
                         nextY + COLLISION_OFFSET_Y,
                         COLLISION_WIDTH,
@@ -297,6 +311,97 @@ public class Player extends Entity {
     public CollisionDebugInfo getYCollisionDebugInfo() {
         return yCollisionDebugInfo;
     }
+
+    public void setSolidEntities(List<? extends Entity> solidEntities) {
+        this.solidEntities = solidEntities;
+    }
+
+
+    private boolean isBlockedByEntity(
+            double collisionX,
+            double collisionY,
+            double collisionWidth,
+            double collisionHeight
+    ) {
+        for (Entity entity : solidEntities) {
+
+            double entityX = entity.getX();
+            double entityY = entity.getY();
+            double entityWidth = entity.getWidth();
+            double entityHeight = entity.getHeight();
+
+            // Use the NPC's lower-body collision box
+            // instead of its entire sprite rectangle.
+            if (entity instanceof Npc) {
+                entityX += 16;
+                entityY += 40;
+                entityWidth = 32;
+                entityHeight = 20;
+            }
+
+            boolean overlaps =
+                    collisionX < entityX + entityWidth
+                            && collisionX + collisionWidth > entityX
+                            && collisionY < entityY + entityHeight
+                            && collisionY + collisionHeight > entityY;
+
+            if (overlaps) {
+
+                // If the player is already overlapping this
+                // entity, allow movement that reduces the overlap.
+                double currentX = x + COLLISION_OFFSET_X;
+                double currentY = y + COLLISION_OFFSET_Y;
+
+                double currentOverlapX = Math.max(
+                        0,
+                        Math.min(
+                                currentX + COLLISION_WIDTH,
+                                entityX + entityWidth
+                        ) - Math.max(currentX, entityX)
+                );
+
+                double currentOverlapY = Math.max(
+                        0,
+                        Math.min(
+                                currentY + COLLISION_HEIGHT,
+                                entityY + entityHeight
+                        ) - Math.max(currentY, entityY)
+                );
+
+                double candidateOverlapX = Math.max(
+                        0,
+                        Math.min(
+                                collisionX + collisionWidth,
+                                entityX + entityWidth
+                        ) - Math.max(collisionX, entityX)
+                );
+
+                double candidateOverlapY = Math.max(
+                        0,
+                        Math.min(
+                                collisionY + collisionHeight,
+                                entityY + entityHeight
+                        ) - Math.max(collisionY, entityY)
+                );
+
+                double currentOverlap =
+                        currentOverlapX * currentOverlapY;
+
+                double candidateOverlap =
+                        candidateOverlapX * candidateOverlapY;
+
+                if (currentOverlap > 0
+                        && candidateOverlap < currentOverlap) {
+                    continue;
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 
 
 }

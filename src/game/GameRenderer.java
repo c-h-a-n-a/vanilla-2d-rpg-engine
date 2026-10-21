@@ -1,6 +1,8 @@
 package game;
 
 import game.entity.Direction;
+import game.entity.Monster;
+import game.entity.Npc;
 import game.entity.Player;
 import game.world.Camera;
 import game.world.CollisionDebugInfo;
@@ -13,11 +15,13 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
 
 public class GameRenderer {
 
     private final Game game;
+    private final Map<String, BufferedImage> portraitCache = new HashMap<>();
 
     private final Map<
             Direction,
@@ -113,12 +117,17 @@ public class GameRenderer {
                 camera
         );
 
+        drawNpcs(graphics);
+        drawMonsters(graphics);
+
         /*
          * Render PLAYER.
          */
         drawPlayer(
                 graphics
         );
+
+        drawDialogueBox(graphics, screenWidth, screenHeight);
 
         /*
          * Collision visualization.
@@ -320,6 +329,200 @@ public class GameRenderer {
         );
     }
 
+
+    private BufferedImage loadPortrait(String resourcePath) {
+        if (resourcePath == null || resourcePath.isBlank()) {
+            return null;
+        }
+
+        if (portraitCache.containsKey(resourcePath)) {
+            return portraitCache.get(resourcePath);
+        }
+
+        try (InputStream stream =
+                     getClass().getResourceAsStream(resourcePath)) {
+
+            if (stream == null) {
+                System.err.println(
+                        "Portrait not found: " + resourcePath
+                );
+                return null;
+            }
+
+            BufferedImage image = javax.imageio.ImageIO.read(stream);
+
+            if (image != null) {
+                portraitCache.put(resourcePath, image);
+            }
+
+            return image;
+
+        } catch (IOException exception) {
+            System.err.println(
+                    "Failed to load portrait: " + resourcePath
+            );
+            return null;
+        }
+    }
+
+    private void drawPortrait(
+            Graphics2D graphics,
+            Npc npc,
+            int x,
+            int y,
+            int size
+    ) {
+        BufferedImage portrait = loadPortrait(npc.getPortraitPath());
+
+        // Temporary placeholder if the portrait is not available.
+        if (portrait == null) {
+            graphics.setColor(new Color(65, 80, 105));
+            graphics.fillRoundRect(x, y, size, size, 10, 10);
+
+            graphics.setColor(Color.WHITE);
+            graphics.setFont(new Font("Monospaced", Font.BOLD, 20));
+
+            String initials = npc.getName().isBlank()
+                    ? "?"
+                    : npc.getName().substring(0, 1).toUpperCase();
+
+            graphics.drawString(
+                    initials,
+                    x + size / 2 - 6,
+                    y + size / 2 + 7
+            );
+
+            return;
+        }
+
+        graphics.drawImage(portrait, x, y, size, size, null);
+    }
+
+
+
+    private void drawDialogueBox(
+            Graphics2D graphics,
+            int screenWidth,
+            int screenHeight
+    ) {
+        Npc npc = game.getActiveNpc();
+
+        // No active NPC means no dialogue box.
+        if (npc == null) {
+            return;
+        }
+
+        int margin = 24;
+        int boxHeight = 140;
+        int boxX = margin;
+        int boxY = screenHeight - boxHeight - margin;
+        int boxWidth = screenWidth - margin * 2;
+
+        // Dialogue background.
+        graphics.setColor(new Color(15, 20, 30, 235));
+        graphics.fillRoundRect(
+                boxX, boxY, boxWidth, boxHeight, 16, 16
+        );
+
+        // Dialogue border.
+        graphics.setColor(new Color(230, 230, 240));
+        graphics.drawRoundRect(
+                boxX, boxY, boxWidth, boxHeight, 16, 16
+        );
+
+        // NPC name.
+//        graphics.setFont(new Font("Monospaced", Font.BOLD, 18));
+//        graphics.setColor(new Color(255, 220, 120));
+//        graphics.drawString(
+//                npc.getName(),
+//                boxX + 20,
+//                boxY + 30
+//        );
+
+        // NPC dialogue.
+        int portraitSize = 128;
+        int portraitX = boxX + 18;
+        int portraitY = boxY + 24;
+
+        drawPortrait(
+                graphics,
+                npc,
+                portraitX,
+                portraitY,
+                portraitSize
+        );
+
+        int textX = portraitX + portraitSize + 20;
+        int textWidth = boxX + boxWidth - textX - 20;
+
+        graphics.setFont(new Font("Monospaced", Font.BOLD, 18));
+        graphics.setColor(new Color(255, 220, 120));
+        graphics.drawString(npc.getName(), textX, boxY + 34);
+
+        graphics.setFont(new Font("Monospaced", Font.PLAIN, 15));
+        graphics.setColor(Color.WHITE);
+
+        drawWrappedText(
+                graphics,
+                game.getActiveDialogueLine(),
+                textX,
+                boxY + 62,
+                textWidth,
+                21
+        );
+
+        graphics.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        graphics.setColor(new Color(200, 200, 200));
+        graphics.drawString(
+                "E - Next",
+                boxX + boxWidth - 100,
+                boxY + boxHeight - 14
+        );
+
+        // Input hint.
+//        graphics.setFont(new Font("Monospaced", Font.PLAIN, 12));
+//        graphics.setColor(new Color(200, 200, 200));
+//        graphics.drawString(
+//                "E - Close",
+//                boxX + boxWidth - 100,
+//                boxY + boxHeight - 14
+//        );
+    }
+
+    private void drawWrappedText(
+            Graphics2D graphics,
+            String text,
+            int x,
+            int y,
+            int maxWidth,
+            int lineHeight
+    ) {
+        String[] words = text.split("\\s+");
+        StringBuilder line = new StringBuilder();
+
+        for (String word : words) {
+            String candidate = line.isEmpty()
+                    ? word
+                    : line + " " + word;
+
+            if (graphics.getFontMetrics().stringWidth(candidate)
+                    > maxWidth && !line.isEmpty()) {
+
+                graphics.drawString(line.toString(), x, y);
+                y += lineHeight;
+
+                line = new StringBuilder(word);
+            } else {
+                line = new StringBuilder(candidate);
+            }
+        }
+
+        if (!line.isEmpty()) {
+            graphics.drawString(line.toString(), x, y);
+        }
+    }
+
+
     private void drawPlayerCollisionBox(
             Graphics2D graphics
     ) {
@@ -356,6 +559,68 @@ public class GameRenderer {
                 collisionHeight
         );
     }
+
+
+    private void drawNpcs(Graphics2D graphics) {
+
+        for (Npc npc : game.getNpcs()) {
+
+            int screenX =
+                    camera.worldToScreenX(npc.getX());
+
+            int screenY =
+                    camera.worldToScreenY(npc.getY());
+
+            graphics.setColor(new Color(60, 140, 240));
+
+            graphics.fillRect(
+                    screenX,
+                    screenY,
+                    npc.getWidth(),
+                    npc.getHeight()
+            );
+
+            graphics.setColor(Color.WHITE);
+
+            graphics.drawString(
+                    "NPC",
+                    screenX + 18,
+                    screenY + 34
+            );
+        }
+    }
+
+
+    private void drawMonsters(Graphics2D graphics) {
+
+        for (Monster monster : game.getMonsters()) {
+
+            int screenX =
+                    camera.worldToScreenX(monster.getX());
+
+            int screenY =
+                    camera.worldToScreenY(monster.getY());
+
+            graphics.setColor(new Color(210, 70, 70));
+
+            graphics.fillRect(
+                    screenX,
+                    screenY,
+                    monster.getWidth(),
+                    monster.getHeight()
+            );
+
+            graphics.setColor(Color.WHITE);
+
+            graphics.drawString(
+                    "MON",
+                    screenX + 12,
+                    screenY + 34
+            );
+        }
+    }
+
+
 
     private void drawInstructions(
             Graphics2D graphics
