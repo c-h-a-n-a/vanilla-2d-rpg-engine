@@ -8,9 +8,10 @@ import game.input.KeyboardInput;
 import game.render.GameRenderer;
 import game.state.Game;
 
-import javax.swing.*;
+import javax.swing.SwingUtilities;
 
 public class Main {
+
     private Main() {
     }
 

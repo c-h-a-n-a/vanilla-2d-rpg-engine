@@ -35,13 +35,10 @@ public final class GameWindow {
         frame.setResizable(false);
     }
 
-    /**
-     * Sizes the window to the canvas, centres it and shows it.
-     */
+    /** Sizes the window to the canvas, centres it and shows it. */
     public void open() {
         frame.pack();
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
 }
-

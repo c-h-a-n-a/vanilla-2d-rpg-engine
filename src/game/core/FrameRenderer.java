@@ -1,6 +1,6 @@
 package game.core;
 
-import java.awt.*;
+import java.awt.Graphics2D;
 
 /**
  * Anything that can draw one frame. Lets the canvas and the game loop

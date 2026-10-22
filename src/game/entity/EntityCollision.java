@@ -13,7 +13,7 @@ final class EntityCollision {
     /**
      * True if moving {@code self} to (nextX, nextY) would make it overlap
      * another entity.
-     * <p>
+     *
      * If the two already overlap (for example an NPC walked into the player),
      * movement that reduces the overlap is allowed so nobody gets stuck.
      */

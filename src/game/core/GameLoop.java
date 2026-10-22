@@ -1,7 +1,7 @@
 package game.core;
 
-import game.state.Game;
 import game.config.GameConfig;
+import game.state.Game;
 
 import java.util.concurrent.locks.LockSupport;
 
@@ -13,9 +13,7 @@ public class GameLoop implements Runnable {
 
     private static final int MAX_UPDATES_PER_CYCLE = 5;
 
-    /**
-     * Caps one loop step so a debugger pause doesn't cause a burst of updates.
-     */
+    /** Caps one loop step so a debugger pause doesn't cause a burst of updates. */
     private static final long MAX_ELAPSED_TIME = 250_000_000L;
 
     private static final long STOP_TIMEOUT_MS = 1000;

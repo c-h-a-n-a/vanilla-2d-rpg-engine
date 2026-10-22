@@ -10,4 +10,3 @@ public record CollisionBox(int offsetX, int offsetY, int width, int height) {
     /** Lower body of a 64x64 sprite. Used by every entity unless overridden. */
     public static final CollisionBox FEET = new CollisionBox(16, 40, 32, 20);
 }
-

@@ -1,6 +1,9 @@
 package game.core;
 
-import java.awt.*;
+import java.awt.Canvas;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.Toolkit;
 import java.awt.image.BufferStrategy;
 
 public class GameCanvas extends Canvas {
@@ -18,9 +21,7 @@ public class GameCanvas extends Canvas {
         setIgnoreRepaint(true);
     }
 
-    /**
-     * The canvas must already be visible before calling this.
-     */
+    /** The canvas must already be visible before calling this. */
     public void initialize() {
         if (!isDisplayable()) {
             throw new IllegalStateException(
