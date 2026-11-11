@@ -2,6 +2,7 @@ package game.render;
 
 import game.core.FrameRenderer;
 import game.state.Game;
+import game.state.GameMode;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -18,6 +19,7 @@ public class GameRenderer implements FrameRenderer {
     private final Game game;
     private final EntityRenderer entityRenderer;
     private final DialogueRenderer dialogueRenderer = new DialogueRenderer();
+    private final BattleRenderer battleRenderer = new BattleRenderer();
     private final DebugOverlay debugOverlay;
 
     public GameRenderer(Game game) {
@@ -27,23 +29,52 @@ public class GameRenderer implements FrameRenderer {
     }
 
     @Override
-    public void render(Graphics2D graphics, int screenWidth, int screenHeight, int fps) {
-        // Pixel-art settings, applied once for the whole frame.
+    public void render(
+            Graphics2D graphics,
+            int screenWidth,
+            int screenHeight,
+            int fps
+    ) {
         graphics.setRenderingHint(
                 RenderingHints.KEY_ANTIALIASING,
-                RenderingHints.VALUE_ANTIALIAS_OFF);
+                RenderingHints.VALUE_ANTIALIAS_OFF
+        );
+
         graphics.setRenderingHint(
                 RenderingHints.KEY_INTERPOLATION,
-                RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+                RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
+        );
 
+        // Battle screen.
+        if (game.getGameMode() == GameMode.BATTLE) {
+            battleRenderer.render(
+                    graphics,
+                    screenWidth,
+                    screenHeight,
+                    game.getEncounteredMonster()
+            );
+
+            return;
+        }
+
+        // Exploration screen.
         graphics.setColor(BACKGROUND);
         graphics.fillRect(0, 0, screenWidth, screenHeight);
 
         game.getCurrentMap().render(graphics, game.getCamera());
 
-        entityRenderer.render(graphics, game.getCamera(), game.getEntities());
+        entityRenderer.render(
+                graphics,
+                game.getCamera(),
+                game.getEntities()
+        );
 
-        dialogueRenderer.render(graphics, game.getDialogue(), screenWidth, screenHeight);
+        dialogueRenderer.render(
+                graphics,
+                game.getDialogue(),
+                screenWidth,
+                screenHeight
+        );
 
         if (game.isDebugEnabled()) {
             debugOverlay.render(graphics, fps);

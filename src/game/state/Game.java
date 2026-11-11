@@ -1,3 +1,4 @@
+
 package game.state;
 
 import game.config.GameConfig;
@@ -39,6 +40,14 @@ public class Game {
 
     private GameMap currentMap;
     private boolean debugEnabled;
+
+    private GameMode gameMode = GameMode.EXPLORATION;
+    private Monster encounteredMonster;
+    private static final double ENCOUNTER_DISTANCE = 56.0;
+    private static final double ENCOUNTER_RESET_DISTANCE = 120.0;
+
+    // Prevents the same monster from immediately starting another battle.
+    private Monster encounterLockoutMonster;
 
     public Game(KeyboardInput input) {
         this.input = input;
@@ -94,11 +103,27 @@ public class Game {
     // ------------------------------------------------------------------
 
     public void update(double deltaTime) {
+
+        // Temporary battle testing control.
+        if (gameMode == GameMode.BATTLE) {
+            if (input.consumeJustPressed(KeyEvent.VK_ESCAPE)) {
+                endBattle();
+            }
+
+            return;
+        }
+
         if (input.consumeJustPressed(KeyEvent.VK_F3)) {
             debugEnabled = !debugEnabled;
         }
 
+        updateEncounterLockout();
         handleInteraction();
+
+        // Interaction may have started a battle.
+        if (gameMode == GameMode.BATTLE) {
+            return;
+        }
 
         boolean talking = dialogue.isActive();
 
@@ -113,6 +138,8 @@ public class Game {
             for (Monster monster : monsters) {
                 monster.update(deltaTime, currentMap);
             }
+
+            checkAutomaticEncounter();
         }
 
         for (Entity entity : entities) {
@@ -160,10 +187,20 @@ public class Game {
             return;
         }
 
-        Npc nearby = findNearbyNpc();
+        // Give NPC interaction priority.
+        Npc nearbyNpc = findNearbyNpc();
 
-        if (nearby != null) {
-            dialogue.start(nearby);
+        if (nearbyNpc != null) {
+            dialogue.start(nearbyNpc);
+            return;
+        }
+
+        // If no NPC is nearby, check for a monster.
+        // Manual interaction can target a monster even during encounter lockout.
+        Monster nearbyMonster = findNearbyMonster(true);
+
+        if (nearbyMonster != null) {
+            startBattle(nearbyMonster);
         }
     }
 
@@ -202,6 +239,141 @@ public class Game {
         }
 
         return nearestNpc;
+    }
+
+    /**
+     * Finds the nearest monster within interaction range and in front of the player.
+     *
+     * @param ignoreLockout true allows manual interaction with the locked-out monster;
+     *                      false excludes it from interaction.
+     */
+    private Monster findNearbyMonster(boolean ignoreLockout) {
+        double playerCenterX = player.getX() + player.getWidth() / 2.0;
+        double playerCenterY = player.getY() + player.getHeight() / 2.0;
+
+        double maxDistanceSquared =
+                GameConfig.INTERACTION_RANGE * GameConfig.INTERACTION_RANGE;
+
+        Monster nearestMonster = null;
+        double nearestDistanceSquared = Double.MAX_VALUE;
+
+        for (Monster monster : monsters) {
+            if (!ignoreLockout && monster == encounterLockoutMonster) {
+                continue;
+            }
+
+            double dx = monster.getX() + monster.getWidth() / 2.0
+                    - playerCenterX;
+
+            double dy = monster.getY() + monster.getHeight() / 2.0
+                    - playerCenterY;
+
+            double distanceSquared = dx * dx + dy * dy;
+
+            if (distanceSquared > maxDistanceSquared) {
+                continue;
+            }
+
+            if (isInFront(dx, dy) && distanceSquared < nearestDistanceSquared) {
+                nearestMonster = monster;
+                nearestDistanceSquared = distanceSquared;
+            }
+        }
+
+        return nearestMonster;
+    }
+
+    /**
+     * Checks whether a target is in the direction the player is facing.
+     */
+    private boolean isInFront(double dx, double dy) {
+        return switch (player.getFacingDirection()) {
+            case UP -> dy < 0 && Math.abs(dy) >= Math.abs(dx);
+            case DOWN -> dy > 0 && Math.abs(dy) >= Math.abs(dx);
+            case LEFT -> dx < 0 && Math.abs(dx) >= Math.abs(dy);
+            case RIGHT -> dx > 0 && Math.abs(dx) >= Math.abs(dy);
+        };
+    }
+
+    private void checkAutomaticEncounter() {
+        double playerCenterX = player.getX() + player.getWidth() / 2.0;
+        double playerCenterY = player.getY() + player.getHeight() / 2.0;
+
+        double encounterDistanceSquared =
+                ENCOUNTER_DISTANCE * ENCOUNTER_DISTANCE;
+
+        for (Monster monster : monsters) {
+            if (monster == encounterLockoutMonster) {
+                continue;
+            }
+
+            double monsterCenterX =
+                    monster.getX() + monster.getWidth() / 2.0;
+
+            double monsterCenterY =
+                    monster.getY() + monster.getHeight() / 2.0;
+
+            double dx = monsterCenterX - playerCenterX;
+            double dy = monsterCenterY - playerCenterY;
+
+            double distanceSquared = dx * dx + dy * dy;
+
+            if (distanceSquared <= encounterDistanceSquared) {
+                startBattle(monster);
+                return;
+            }
+        }
+    }
+
+    private void startBattle(Monster monster) {
+        if (gameMode == GameMode.BATTLE) {
+            return;
+        }
+
+        dialogue.end();
+
+        encounteredMonster = monster;
+        encounterLockoutMonster = monster;
+
+        gameMode = GameMode.BATTLE;
+
+        player.setMoveIntent(0, 0);
+    }
+
+    private void endBattle() {
+        gameMode = GameMode.EXPLORATION;
+        encounteredMonster = null;
+
+        player.setMoveIntent(0, 0);
+
+        updateCamera();
+    }
+
+    private void updateEncounterLockout() {
+        if (encounterLockoutMonster == null) {
+            return;
+        }
+
+        double playerCenterX = player.getX() + player.getWidth() / 2.0;
+        double playerCenterY = player.getY() + player.getHeight() / 2.0;
+
+        double monsterCenterX =
+                encounterLockoutMonster.getX()
+                        + encounterLockoutMonster.getWidth() / 2.0;
+
+        double monsterCenterY =
+                encounterLockoutMonster.getY()
+                        + encounterLockoutMonster.getHeight() / 2.0;
+
+        double dx = monsterCenterX - playerCenterX;
+        double dy = monsterCenterY - playerCenterY;
+
+        double distanceSquared = dx * dx + dy * dy;
+
+        if (distanceSquared >
+                ENCOUNTER_RESET_DISTANCE * ENCOUNTER_RESET_DISTANCE) {
+            encounterLockoutMonster = null;
+        }
     }
 
     private void updateCamera() {
@@ -258,5 +430,13 @@ public class Game {
 
     public boolean isDebugEnabled() {
         return debugEnabled;
+    }
+
+    public GameMode getGameMode() {
+        return gameMode;
+    }
+
+    public Monster getEncounteredMonster() {
+        return encounteredMonster;
     }
 }
