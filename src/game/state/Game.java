@@ -1,5 +1,8 @@
 package game.state;
 
+import game.battle.BattleFactory;
+import game.battle.BattleMonster;
+import game.battle.BattleState;
 import game.config.GameConfig;
 import game.entity.Entity;
 import game.entity.Monster;
@@ -40,6 +43,21 @@ public class Game {
     private GameMap currentMap;
     private boolean debugEnabled;
 
+<<<<<<< Updated upstream
+=======
+    private GameMode gameMode = GameMode.EXPLORATION;
+    private Monster encounteredMonster;
+    private static final double ENCOUNTER_DISTANCE = 56.0;
+    private static final double ENCOUNTER_RESET_DISTANCE = 120.0;
+
+    // Prevents the same monster from immediately starting another battle.
+    private Monster encounterLockoutMonster;
+
+    private final BattleMonster playerBattleMonster = BattleFactory.createPlayerMonster();
+    private BattleState battleState;
+    private int selectedMoveIndex;
+
+>>>>>>> Stashed changes
     public Game(KeyboardInput input) {
         this.input = input;
 
@@ -75,7 +93,8 @@ public class Game {
 
         npcs.add(elder);
 
-        monsters.add(new Monster(MonsterType.GENERIC, 800, 400));
+        Monster wolf = new Monster(MonsterType.WOLF, 800, 400);
+        monsters.add(wolf);
     }
 
     private void registerEntities() {
@@ -94,6 +113,15 @@ public class Game {
     // ------------------------------------------------------------------
 
     public void update(double deltaTime) {
+<<<<<<< Updated upstream
+=======
+
+        if (gameMode == GameMode.BATTLE) {
+            updateBattle();
+            return;
+        }
+
+>>>>>>> Stashed changes
         if (input.consumeJustPressed(KeyEvent.VK_F3)) {
             debugEnabled = !debugEnabled;
         }
@@ -204,6 +232,229 @@ public class Game {
         return nearestNpc;
     }
 
+<<<<<<< Updated upstream
+=======
+    /**
+     * Finds the nearest monster within interaction range and in front of the player.
+     *
+     * @param ignoreLockout true allows manual interaction with the locked-out monster;
+     *                      false excludes it from interaction.
+     */
+    private Monster findNearbyMonster(boolean ignoreLockout) {
+        double playerCenterX = player.getX() + player.getWidth() / 2.0;
+        double playerCenterY = player.getY() + player.getHeight() / 2.0;
+
+        double maxDistanceSquared =
+                GameConfig.INTERACTION_RANGE * GameConfig.INTERACTION_RANGE;
+
+        Monster nearestMonster = null;
+        double nearestDistanceSquared = Double.MAX_VALUE;
+
+        for (Monster monster : monsters) {
+            if (!ignoreLockout && monster == encounterLockoutMonster) {
+                continue;
+            }
+
+            double dx = monster.getX() + monster.getWidth() / 2.0
+                    - playerCenterX;
+
+            double dy = monster.getY() + monster.getHeight() / 2.0
+                    - playerCenterY;
+
+            double distanceSquared = dx * dx + dy * dy;
+
+            if (distanceSquared > maxDistanceSquared) {
+                continue;
+            }
+
+            if (isInFront(dx, dy) && distanceSquared < nearestDistanceSquared) {
+                nearestMonster = monster;
+                nearestDistanceSquared = distanceSquared;
+            }
+        }
+
+        return nearestMonster;
+    }
+
+    /**
+     * Checks whether a target is in the direction the player is facing.
+     */
+    private boolean isInFront(double dx, double dy) {
+        return switch (player.getFacingDirection()) {
+            case UP -> dy < 0 && Math.abs(dy) >= Math.abs(dx);
+            case DOWN -> dy > 0 && Math.abs(dy) >= Math.abs(dx);
+            case LEFT -> dx < 0 && Math.abs(dx) >= Math.abs(dy);
+            case RIGHT -> dx > 0 && Math.abs(dx) >= Math.abs(dy);
+        };
+    }
+
+    private void checkAutomaticEncounter() {
+        double playerCenterX = player.getX() + player.getWidth() / 2.0;
+        double playerCenterY = player.getY() + player.getHeight() / 2.0;
+
+        double encounterDistanceSquared =
+                ENCOUNTER_DISTANCE * ENCOUNTER_DISTANCE;
+
+        for (Monster monster : monsters) {
+            if (monster == encounterLockoutMonster) {
+                continue;
+            }
+
+            double monsterCenterX =
+                    monster.getX() + monster.getWidth() / 2.0;
+
+            double monsterCenterY =
+                    monster.getY() + monster.getHeight() / 2.0;
+
+            double dx = monsterCenterX - playerCenterX;
+            double dy = monsterCenterY - playerCenterY;
+
+            double distanceSquared = dx * dx + dy * dy;
+
+            if (distanceSquared <= encounterDistanceSquared) {
+                startBattle(monster);
+                return;
+            }
+        }
+    }
+
+    //-----------------------------------
+    //battle related
+    //---------------------------------
+    /**
+     * Handles input while a battle is running: move selection, confirming a move,
+     * and leaving once the battle is over.
+     */
+    private void updateBattle() {
+        // Temporary escape hatch for testing; the real Run command comes later.
+        if (input.consumeJustPressed(KeyEvent.VK_ESCAPE)) {
+            endBattle(false);
+            return;
+        }
+
+        // Non-short-circuit '|' so every confirm key is consumed on the same frame.
+        boolean confirm = input.consumeJustPressed(KeyEvent.VK_E)
+                | input.consumeJustPressed(KeyEvent.VK_ENTER);
+
+        // Battle finished: wait for confirmation, then return to the world.
+        if (battleState.getPhase() != BattleState.Phase.PLAYER_TURN) {
+            if (confirm) {
+                endBattle(battleState.getPhase() == BattleState.Phase.VICTORY);
+            }
+            return;
+        }
+
+        // 2x2 move grid: horizontal keys switch column, vertical keys switch row.
+        boolean horizontal = input.consumeJustPressed(KeyEvent.VK_LEFT)
+                | input.consumeJustPressed(KeyEvent.VK_A)
+                | input.consumeJustPressed(KeyEvent.VK_RIGHT)
+                | input.consumeJustPressed(KeyEvent.VK_D);
+
+        boolean vertical = input.consumeJustPressed(KeyEvent.VK_UP)
+                | input.consumeJustPressed(KeyEvent.VK_W)
+                | input.consumeJustPressed(KeyEvent.VK_DOWN)
+                | input.consumeJustPressed(KeyEvent.VK_S);
+
+        if (horizontal) {
+            selectedMoveIndex = (selectedMoveIndex / 2) * 2 + (selectedMoveIndex + 1) % 2;
+        }
+        if (vertical) {
+            selectedMoveIndex = (selectedMoveIndex + 2) % BattleMonster.MOVE_COUNT;
+        }
+
+        if (confirm) {
+            battleState.executePlayerMove(selectedMoveIndex);
+        }
+    }
+
+    /** Switches to battle mode and creates the battle for the given overworld monster. */
+    private void startBattle(Monster monster) {
+        if (gameMode == GameMode.BATTLE) {
+            return;
+        }
+
+        dialogue.end();
+
+        encounteredMonster = monster;
+        encounterLockoutMonster = monster;
+
+        battleState = new BattleState(
+                playerBattleMonster,
+                BattleFactory.createEnemy(monster.getType()));
+        selectedMoveIndex = 0;
+
+        gameMode = GameMode.BATTLE;
+
+        player.setMoveIntent(0, 0);
+        input.clearJustPressed(); // drop stale key presses from exploration
+    }
+
+    /**
+     * Returns to exploration. On victory the defeated monster is removed from the
+     * world. The player's monster is healed afterwards (prototype behaviour).
+     *
+     * @param won true if the player won and the enemy should disappear
+     */
+    private void endBattle(boolean won) {
+        if (won && encounteredMonster != null) {
+            monsters.remove(encounteredMonster);
+            entities.remove(encounteredMonster);
+
+            if (encounterLockoutMonster == encounteredMonster) {
+                encounterLockoutMonster = null;
+            }
+        }
+
+        playerBattleMonster.restoreFullHp();
+
+        gameMode = GameMode.EXPLORATION;
+        encounteredMonster = null;
+        battleState = null;
+
+        player.setMoveIntent(0, 0);
+        input.clearJustPressed();
+
+        updateCamera();
+    }
+
+    /** Returns the active battle, or null when not in battle (read-only for the renderer). */
+    public BattleState getBattleState() {
+        return battleState;
+    }
+
+    /** Returns the move slot currently highlighted in the battle menu. */
+    public int getSelectedMoveIndex() {
+        return selectedMoveIndex;
+    }
+
+    private void updateEncounterLockout() {
+        if (encounterLockoutMonster == null) {
+            return;
+        }
+
+        double playerCenterX = player.getX() + player.getWidth() / 2.0;
+        double playerCenterY = player.getY() + player.getHeight() / 2.0;
+
+        double monsterCenterX =
+                encounterLockoutMonster.getX()
+                        + encounterLockoutMonster.getWidth() / 2.0;
+
+        double monsterCenterY =
+                encounterLockoutMonster.getY()
+                        + encounterLockoutMonster.getHeight() / 2.0;
+
+        double dx = monsterCenterX - playerCenterX;
+        double dy = monsterCenterY - playerCenterY;
+
+        double distanceSquared = dx * dx + dy * dy;
+
+        if (distanceSquared >
+                ENCOUNTER_RESET_DISTANCE * ENCOUNTER_RESET_DISTANCE) {
+            encounterLockoutMonster = null;
+        }
+    }
+
+>>>>>>> Stashed changes
     private void updateCamera() {
         camera.follow(
                 player.getX() + player.getWidth() / 2.0,
@@ -212,6 +463,10 @@ public class Game {
                 currentMap.getWorldHeight()
         );
     }
+
+
+
+
 
     // ------------------------------------------------------------------
     // Maps

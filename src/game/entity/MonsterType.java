@@ -7,7 +7,8 @@ package game.entity;
 public enum MonsterType {
 
     GENERIC("MON", 0xD24646),
-    PINK_SLIME("SLM", 0xEB78B4);
+    PINK_SLIME("SLM", 0xEB78B4),
+    WOLF("WLF", 0x8B6F47);
 
     private final String label;
     private final int rgb;

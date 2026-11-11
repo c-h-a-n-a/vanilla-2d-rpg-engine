@@ -63,4 +63,8 @@ public class KeyboardInput implements KeyListener, FocusListener {
         pressedKeys.clear();
         justPressedKeys.clear();
     }
+
+    public synchronized void clearJustPressed() {
+        justPressedKeys.clear();
+    }
 }
