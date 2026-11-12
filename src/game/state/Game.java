@@ -354,7 +354,7 @@ public class Game {
                 input,
                 new BattleState(
                         playerBattleParty,
-                        BattleFactory.createEnemy(monster.getType())));
+                        BattleFactory.createEnemyFormation(monster.getType())));
 
         gameMode = GameMode.BATTLE;
 

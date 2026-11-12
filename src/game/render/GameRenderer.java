@@ -48,7 +48,6 @@ public class GameRenderer implements FrameRenderer {
                                 graphics,
                                 screenWidth,
                                 screenHeight,
-                                game.getEncounteredMonster(),
                                 game.getBattleController()
                         );
                         return;
