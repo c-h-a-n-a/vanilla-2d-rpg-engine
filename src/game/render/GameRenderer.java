@@ -42,6 +42,21 @@ public class GameRenderer implements FrameRenderer {
                                 RenderingHints.KEY_INTERPOLATION,
                                 RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
 
+                // Battle screen.
+                if (game.getGameMode() == GameMode.BATTLE) {
+                        battleRenderer.render(
+                                graphics,
+                                screenWidth,
+                                screenHeight,
+                                game.getEncounteredMonster(),
+                                game.getBattleState(),
+                                game.getSelectedMoveIndex()
+                        );
+
+                        return;
+                }
+
+                // Exploration screen.
                 graphics.setColor(BACKGROUND);
                 graphics.fillRect(0, 0, screenWidth, screenHeight);
 
