@@ -3,6 +3,7 @@ package game.state;
 
 import game.battle.BattleFactory;
 import game.battle.BattleMonster;
+import game.battle.BattleParty;
 import game.battle.BattleState;
 import game.config.GameConfig;
 import game.entity.Entity;
@@ -51,9 +52,8 @@ public class Game {
     // Prevents the same monster from immediately starting another battle.
     private Monster encounterLockoutMonster;
 
-    private final BattleMonster playerBattleMonster = BattleFactory.createPlayerMonster();
-    private BattleState battleState;
-    private int selectedMoveIndex;
+    private final BattleParty playerBattleParty = BattleFactory.createPlayerParty();
+    private BattleController battleController;
 
     public Game(KeyboardInput input) {
         this.input = input;
@@ -330,52 +330,16 @@ public class Game {
      * Handles input while a battle is running: move selection, confirming a move,
      * and leaving once the battle is over.
      */
+    /** Runs one frame of battle input and leaves the battle when the controller says it's over. */
     private void updateBattle() {
-        // Temporary escape hatch for testing; the real Run command comes later.
-        if (input.consumeJustPressed(KeyEvent.VK_ESCAPE)) {
-            endBattle(false);
-            return;
-        }
+        battleController.update();
 
-        // Non-short-circuit '|' so every confirm key is consumed on the same frame.
-        boolean confirm = input.consumeJustPressed(KeyEvent.VK_E)
-                | input.consumeJustPressed(KeyEvent.VK_ENTER);
-
-        // Battle finished: wait for confirmation, then return to the world.
-        if (battleState.getPhase() != BattleState.Phase.PLAYER_TURN) {
-            if (confirm) {
-                endBattle(battleState.getPhase() == BattleState.Phase.VICTORY);
-            }
-            return;
-        }
-
-        // 2x2 move grid: horizontal keys switch column, vertical keys switch row.
-        boolean horizontal = input.consumeJustPressed(KeyEvent.VK_LEFT)
-                | input.consumeJustPressed(KeyEvent.VK_A)
-                | input.consumeJustPressed(KeyEvent.VK_RIGHT)
-                | input.consumeJustPressed(KeyEvent.VK_D);
-
-        boolean vertical = input.consumeJustPressed(KeyEvent.VK_UP)
-                | input.consumeJustPressed(KeyEvent.VK_W)
-                | input.consumeJustPressed(KeyEvent.VK_DOWN)
-                | input.consumeJustPressed(KeyEvent.VK_S);
-
-        if (horizontal) {
-            selectedMoveIndex = (selectedMoveIndex / 2) * 2 + (selectedMoveIndex + 1) % 2;
-        }
-        if (vertical) {
-            selectedMoveIndex = (selectedMoveIndex + 2) % BattleMonster.MOVE_COUNT;
-        }
-
-        if (confirm) {
-            battleState.executePlayerMove(selectedMoveIndex);
+        if (battleController.isFinished()) {
+            endBattle(battleController.isPlayerWon());
         }
     }
 
-    /**
-     * Switches to battle mode and creates the battle for the given overworld
-     * monster.
-     */
+    /** Switches to battle mode and creates the battle for the given overworld monster. */
     private void startBattle(Monster monster) {
         if (gameMode == GameMode.BATTLE) {
             return;
@@ -386,10 +350,11 @@ public class Game {
         encounteredMonster = monster;
         encounterLockoutMonster = monster;
 
-        battleState = new BattleState(
-                playerBattleMonster,
-                BattleFactory.createEnemy(monster.getType()));
-        selectedMoveIndex = 0;
+        battleController = new BattleController(
+                input,
+                new BattleState(
+                        playerBattleParty,
+                        BattleFactory.createEnemy(monster.getType())));
 
         gameMode = GameMode.BATTLE;
 
@@ -399,7 +364,7 @@ public class Game {
 
     /**
      * Returns to exploration. On victory the defeated monster is removed from the
-     * world. The player's monster is healed afterwards (prototype behaviour).
+     * world. The whole party is healed afterwards (prototype behaviour).
      *
      * @param won true if the player won and the enemy should disappear
      */
@@ -413,11 +378,11 @@ public class Game {
             }
         }
 
-        playerBattleMonster.restoreFullHp();
+        playerBattleParty.restoreAllHp();
 
         gameMode = GameMode.EXPLORATION;
         encounteredMonster = null;
-        battleState = null;
+        battleController = null;
 
         player.setMoveIntent(0, 0);
         input.clearJustPressed();
@@ -425,18 +390,11 @@ public class Game {
         updateCamera();
     }
 
-    /**
-     * Returns the active battle, or null when not in battle (read-only for the
-     * renderer).
-     */
-    public BattleState getBattleState() {
-        return battleState;
+    /** Returns the active battle controller, or null when not in battle (read-only for the renderer). */
+    public BattleController getBattleController() {
+        return battleController;
     }
 
-    /** Returns the move slot currently highlighted in the battle menu. */
-    public int getSelectedMoveIndex() {
-        return selectedMoveIndex;
-    }
 
     private void updateEncounterLockout() {
         if (encounterLockoutMonster == null) {

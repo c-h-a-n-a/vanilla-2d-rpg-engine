@@ -1,8 +1,10 @@
 package game.battle;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
-/** Chooses the enemy's move. Currently a random pick; smarter AI comes in Milestone 4. */
+/** Chooses the enemy's move and target. Random for now; smarter AI comes in Milestone 4. */
 public class EnemyAI {
 
     private final Random random;
@@ -24,5 +26,26 @@ public class EnemyAI {
      */
     public int chooseMoveIndex(BattleMonster enemy) {
         return random.nextInt(BattleMonster.MOVE_COUNT);
+    }
+
+    /**
+     * Picks which living active player monster to attack.
+     *
+     * @return the chosen party slot, or -1 if no active monster can be targeted
+     */
+    public int chooseTargetSlot(BattleParty party) {
+        List<Integer> candidates = new ArrayList<>();
+
+        for (int slot = 0; slot < BattleParty.ACTIVE_SLOTS; slot++) {
+            if (party.isSlotAlive(slot)) {
+                candidates.add(slot);
+            }
+        }
+
+        if (candidates.isEmpty()) {
+            return -1;
+        }
+
+        return candidates.get(random.nextInt(candidates.size()));
     }
 }

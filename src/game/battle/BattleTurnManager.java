@@ -1,28 +1,26 @@
 package game.battle;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /** Decides the order in which the actions of a round are resolved. */
 public class BattleTurnManager {
 
     /**
-     * Orders the two actions of a round. The faster attacker goes first;
-     * on equal speed the player goes first (deterministic tie-break).
-     * Move priority will be added here in Milestone 4.
+     * Orders a round's actions from fastest attacker to slowest. The sort is
+     * stable, so equal speeds keep the order they were supplied in: callers
+     * pass player slots first (slot 0, then slot 1), then the enemy, which
+     * gives a deterministic tie-break. Move priority joins this in Milestone 4.
      *
-     * @return the actions in the order they should be resolved
+     * @return a new list in resolution order
      */
-    public List<BattleAction> orderActions(
-            BattleAction playerAction,
-            BattleAction enemyAction) {
+    public List<BattleAction> orderActions(List<BattleAction> actions) {
+        List<BattleAction> ordered = new ArrayList<>(actions);
 
-        int playerSpeed = playerAction.attacker().getSpeed();
-        int enemySpeed = enemyAction.attacker().getSpeed();
+        ordered.sort(Comparator.comparingInt(
+                (BattleAction action) -> action.attacker().getSpeed()).reversed());
 
-        if (enemySpeed > playerSpeed) {
-            return List.of(enemyAction, playerAction);
-        }
-
-        return List.of(playerAction, enemyAction);
+        return ordered;
     }
 }

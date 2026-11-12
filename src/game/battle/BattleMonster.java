@@ -44,9 +44,9 @@ public class BattleMonster {
         if (maxHp <= 0) {
             throw new IllegalArgumentException("Max HP must be positive.");
         }
-        if (moves == null || moves.length != MOVE_COUNT) {
+        if (moves == null) {
             throw new IllegalArgumentException(
-                    "A battle monster must have exactly " + MOVE_COUNT + " moves.");
+                    "A battle monster must atleast 1 move");
         }
         for (BattleMove move : moves) {
             if (move == null) {

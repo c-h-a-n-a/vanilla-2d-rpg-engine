@@ -1,113 +1,213 @@
 package game.battle;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Holds one battle and advances it one round at a time.
- * The player picks a move; the enemy picks its own; the turn manager orders
- * them by speed and both are resolved. No rendering code lives here.
+ * Holds one battle (a player party against one enemy) and advances it one
+ * round at a time. No rendering or input code lives here.
  */
 public class BattleState {
 
     /** Where the battle currently stands. */
     public enum Phase {
-        PLAYER_TURN,
+        /** The player is choosing a move for each active monster. */
+        COMMAND_SELECTION,
+        /** An active monster fainted; the player must send in a replacement. */
+        FORCED_SWITCH,
         VICTORY,
         DEFEAT
     }
 
-    private final BattleMonster playerMonster;
+    private final BattleParty playerParty;
     private final BattleMonster enemyMonster;
 
     private final BattleTurnManager turnManager = new BattleTurnManager();
     private final EnemyAI enemyAI;
 
-    private Phase phase;
+    private Phase phase = Phase.COMMAND_SELECTION;
     private String lastMessage;
 
     /** Creates a battle with the default random enemy AI. */
-    public BattleState(BattleMonster playerMonster, BattleMonster enemyMonster) {
-        this(playerMonster, enemyMonster, new EnemyAI());
+    public BattleState(BattleParty playerParty, BattleMonster enemyMonster) {
+        this(playerParty, enemyMonster, new EnemyAI());
     }
 
     /** Creates a battle with a supplied enemy AI (useful for deterministic tests). */
     public BattleState(
-            BattleMonster playerMonster,
+            BattleParty playerParty,
             BattleMonster enemyMonster,
             EnemyAI enemyAI) {
 
-        this.playerMonster = playerMonster;
+        this.playerParty = playerParty;
         this.enemyMonster = enemyMonster;
         this.enemyAI = enemyAI;
 
-        this.phase = Phase.PLAYER_TURN;
-        this.lastMessage = "Choose a move!";
+        this.lastMessage = "A wild " + enemyMonster.getName() + " appeared!";
+    }
+
+    /** Returns true if the given active slot holds a monster that can act. */
+    public boolean canSlotAct(int slot) {
+        return playerParty.isSlotAlive(slot);
     }
 
     /**
-     * Plays one full round using the player's chosen move slot.
-     * Does nothing if the battle is over or the slot is invalid.
+     * Plays one full round. The enemy picks its action, then all actions are
+     * ordered by speed and resolved. A monster that faints before its turn
+     * loses its action. Does nothing if the phase is wrong or a slot that can
+     * act has no valid move chosen.
+     *
+     * @param moveIndices chosen move per party slot; ignored for slots that cannot act
      */
-    public void executePlayerMove(int moveIndex) {
-        if (phase != Phase.PLAYER_TURN) {
+    public void executeRound(int[] moveIndices) {
+        if (phase != Phase.COMMAND_SELECTION
+                || moveIndices == null
+                || moveIndices.length != BattleParty.ACTIVE_SLOTS) {
             return;
         }
-        if (moveIndex < 0 || moveIndex >= BattleMonster.MOVE_COUNT) {
-            return;
+
+        // Player actions first (slot order), then the enemy: this is the speed tie-break order.
+        List<BattleAction> actions = new ArrayList<>();
+
+        for (int slot = 0; slot < BattleParty.ACTIVE_SLOTS; slot++) {
+            if (!canSlotAct(slot)) {
+                continue;
+            }
+
+            int moveIndex = moveIndices[slot];
+            if (moveIndex < 0 || moveIndex >= BattleMonster.MOVE_COUNT) {
+                return; // incomplete selection: reject the whole round
+            }
+
+            BattleMonster attacker = playerParty.getActive(slot);
+            actions.add(new BattleAction(
+                    attacker, enemyMonster, attacker.getMove(moveIndex)));
         }
 
-        BattleAction playerAction = new BattleAction(
-                playerMonster, enemyMonster, playerMonster.getMove(moveIndex));
+        int targetSlot = enemyAI.chooseTargetSlot(playerParty);
+        if (targetSlot >= 0) {
+            BattleMove enemyMove =
+                    enemyMonster.getMove(enemyAI.chooseMoveIndex(enemyMonster));
 
-        BattleAction enemyAction = new BattleAction(
-                enemyMonster, playerMonster,
-                enemyMonster.getMove(enemyAI.chooseMoveIndex(enemyMonster)));
+            actions.add(new BattleAction(
+                    enemyMonster, playerParty.getActive(targetSlot), enemyMove));
+        }
 
-        resolveRound(turnManager.orderActions(playerAction, enemyAction));
+        resolveRound(turnManager.orderActions(actions));
     }
 
     /**
-     * Resolves the ordered actions of a round. If a monster faints, the round
-     * ends immediately, so a fainted monster never gets to act.
+     * Resolves the ordered actions, builds the message log and moves to the
+     * next phase (victory, defeat, forced switch or a new command phase).
      */
     private void resolveRound(List<BattleAction> orderedActions) {
-        StringBuilder log = new StringBuilder();
+        List<String> log = new ArrayList<>();
 
         for (BattleAction action : orderedActions) {
+            // Fainted earlier this round, so this action is lost.
+            if (action.attacker().isFainted()) {
+                continue;
+            }
+
             BattleMonster defender = action.defender();
 
             int damage = DamageCalculator.calculate(
                     action.attacker(), defender, action.move());
             defender.takeDamage(damage);
 
-            appendLine(log, action.attacker().getName()
+            log.add(action.attacker().getName()
                     + " used " + action.move().getName()
-                    + "! It dealt " + damage + " damage.");
+                    + " on " + defender.getName()
+                    + "! (" + damage + " damage)");
 
             if (defender.isFainted()) {
-                boolean enemyFainted = defender == enemyMonster;
-                phase = enemyFainted ? Phase.VICTORY : Phase.DEFEAT;
+                log.add(defender.getName() + " fainted!");
+            }
 
-                appendLine(log, defender.getName() + " fainted! "
-                        + (enemyFainted ? "You won!" : "You lost..."));
+            if (enemyMonster.isFainted() || playerParty.isDefeated()) {
                 break;
             }
         }
 
-        lastMessage = log.toString();
-    }
-
-    /** Appends a line to the log, adding a newline separator when needed. */
-    private void appendLine(StringBuilder log, String line) {
-        if (log.length() > 0) {
-            log.append('\n');
+        if (enemyMonster.isFainted()) {
+            phase = Phase.VICTORY;
+            log.add("You won!");
+        } else if (playerParty.isDefeated()) {
+            phase = Phase.DEFEAT;
+            log.add("You lost...");
+        } else {
+            phase = nextCommandPhase();
         }
-        log.append(line);
+
+        lastMessage = String.join("\n", log);
     }
 
-    /** Returns the player's monster. */
-    public BattleMonster getPlayerMonster() {
-        return playerMonster;
+    /**
+     * Swaps an active monster with a reserve monster. This is free: it never
+     * consumes an action, and the incoming monster inherits the slot's action
+     * for the round. Allowed during command selection (any slot) and during a
+     * forced switch (only the slot that needs a replacement).
+     *
+     * @return true if the switch happened
+     */
+    public boolean switchActiveMonster(int slot, int reserveIndex) {
+        if (phase != Phase.COMMAND_SELECTION && phase != Phase.FORCED_SWITCH) {
+            return false;
+        }
+        if (slot < 0 || slot >= BattleParty.ACTIVE_SLOTS
+                || playerParty.getActive(slot) == null
+                || !playerParty.canSwitchTo(reserveIndex)) {
+            return false;
+        }
+        if (phase == Phase.FORCED_SWITCH && slot != getSlotNeedingReplacement()) {
+            return false;
+        }
+
+        BattleMonster outgoing = playerParty.getActive(slot);
+        BattleMonster incoming = playerParty.getReserveMember(reserveIndex);
+
+        playerParty.switchSlot(slot, reserveIndex);
+
+        lastMessage = outgoing.isFainted()
+                ? "Go, " + incoming.getName() + "!"
+                : "Come back, " + outgoing.getName()
+                + "! Go, " + incoming.getName() + "!";
+
+        if (phase == Phase.FORCED_SWITCH) {
+            phase = nextCommandPhase();
+        }
+
+        return true;
+    }
+
+    /**
+     * Returns the first active slot whose monster fainted while a living
+     * reserve monster is available, or -1 if no replacement is needed.
+     */
+    public int getSlotNeedingReplacement() {
+        if (!playerParty.hasLivingReserve()) {
+            return -1;
+        }
+
+        for (int slot = 0; slot < BattleParty.ACTIVE_SLOTS; slot++) {
+            BattleMonster monster = playerParty.getActive(slot);
+            if (monster != null && monster.isFainted()) {
+                return slot;
+            }
+        }
+        return -1;
+    }
+
+    /** Returns FORCED_SWITCH if a replacement is needed, otherwise COMMAND_SELECTION. */
+    private Phase nextCommandPhase() {
+        return getSlotNeedingReplacement() >= 0
+                ? Phase.FORCED_SWITCH
+                : Phase.COMMAND_SELECTION;
+    }
+
+    /** Returns the player's party. */
+    public BattleParty getPlayerParty() {
+        return playerParty;
     }
 
     /** Returns the enemy monster. */
@@ -120,7 +220,7 @@ public class BattleState {
         return phase;
     }
 
-    /** Returns the message(s) from the last round, lines separated by '\n'. */
+    /** Returns the message(s) from the last event, lines separated by '\n'. */
     public String getLastMessage() {
         return lastMessage;
     }
