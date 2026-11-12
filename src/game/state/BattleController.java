@@ -316,46 +316,110 @@ public class BattleController {
     }
 
     /**
-     * Navigates the fixed 3-by-2 enemy formation while skipping invalid targets.
+     * Navigates the fixed 3-by-2 enemy formation.
+     *
+     * Horizontal movement skips empty or invalid positions in the same row.
+     * Vertical movement searches the adjacent row and selects the closest
+     * valid target to the current column.
      *
      * @param current current formation position index
      * @param validTargets positions allowed by the selected move
-     * @return selected formation position index
+     * @return new formation position index
      */
     private int navigateTargets(
             int current,
             List<EnemyFormation.Position> validTargets) {
 
-        int column = current % EnemyFormation.SLOTS_PER_ROW;
-        int row = current / EnemyFormation.SLOTS_PER_ROW;
+        int horizontal = horizontalInput();
+        int vertical = verticalInput();
 
-        column = Math.max(0, Math.min(
-                EnemyFormation.SLOTS_PER_ROW - 1,
-                column + horizontalInput()));
+        int currentRow = current / EnemyFormation.SLOTS_PER_ROW;
+        int currentColumn = current % EnemyFormation.SLOTS_PER_ROW;
 
-        row = Math.max(0, Math.min(1, row + verticalInput()));
+        // Horizontal movement: skip empty or invalid positions.
+        if (horizontal != 0) {
 
-        int candidate = row * EnemyFormation.SLOTS_PER_ROW + column;
+            for (int distance = 1;
+                 distance < EnemyFormation.SLOTS_PER_ROW;
+                 distance++) {
 
-        int bestIndex = current;
-        int bestDistance = Integer.MAX_VALUE;
+                int nextColumn = currentColumn + horizontal * distance;
+
+                // Stop when reaching the edge of the row.
+                if (nextColumn < 0
+                        || nextColumn >= EnemyFormation.SLOTS_PER_ROW) {
+                    break;
+                }
+
+                int candidate = currentRow * EnemyFormation.SLOTS_PER_ROW
+                        + nextColumn;
+
+                if (isValidTargetIndex(candidate, validTargets)) {
+                    return candidate;
+                }
+            }
+
+            return current;
+        }
+
+        // Vertical movement: move to the adjacent row.
+        if (vertical != 0) {
+
+            int targetRow = currentRow + vertical;
+
+            // The formation has only two rows.
+            if (targetRow < 0 || targetRow > 1) {
+                return current;
+            }
+
+            int bestIndex = -1;
+            int bestDistance = Integer.MAX_VALUE;
+
+            for (EnemyFormation.Position position : validTargets) {
+
+                int index = state.getEnemyFormation()
+                        .getPositionIndex(position);
+
+                int candidateRow =
+                        index / EnemyFormation.SLOTS_PER_ROW;
+
+                // Only consider targets in the requested row.
+                if (candidateRow != targetRow) {
+                    continue;
+                }
+
+                int distance = Math.abs(position.slot() - currentColumn);
+
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestIndex = index;
+                }
+            }
+
+            return bestIndex >= 0 ? bestIndex : current;
+        }
+
+        return current;
+    }
+
+    /**
+     * Checks whether a formation position is included in the valid target list.
+     *
+     * @param index formation position index
+     * @param validTargets positions allowed by the selected move
+     * @return true if the position can be targeted
+     */
+    private boolean isValidTargetIndex(
+            int index,
+            List<EnemyFormation.Position> validTargets) {
 
         for (EnemyFormation.Position position : validTargets) {
-            int index = state.getEnemyFormation().getPositionIndex(position);
-
-            int candidateRow = index / EnemyFormation.SLOTS_PER_ROW;
-            int candidateColumn = index % EnemyFormation.SLOTS_PER_ROW;
-
-            int distance = Math.abs(candidateRow - row)
-                    + Math.abs(candidateColumn - column);
-
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                bestIndex = index;
+            if (state.getEnemyFormation().getPositionIndex(position) == index) {
+                return true;
             }
         }
 
-        return bestIndex;
+        return false;
     }
 
     /**
